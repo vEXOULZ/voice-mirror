@@ -173,6 +173,10 @@ button:hover:not(:disabled) { border-color: var(--accent); background: var(--acc
    in Chrome on Windows, under light text in the dark theme. */
 select:hover:not(:disabled) { border-color: var(--accent); }
 option { background: var(--surface); color: var(--ink); }
+/* The rule above replaces the browser's grey for an option that cannot be
+   picked, so it is put back: a take kept from the rewind buffer has no
+   compressed copy, and the option should look as unavailable as it is. */
+option:disabled { color: color-mix(in srgb, var(--ink) 38%, var(--surface)); }
 button:disabled, select:disabled { opacity: .45; cursor: default; }
 button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
