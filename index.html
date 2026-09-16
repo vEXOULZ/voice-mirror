@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice mirror</title>
+<meta name="description" content="A browser mirror for your voice: pitch, brightness and vowel, live, with nothing leaving the machine.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🎙</text></svg>">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="head">
+  <div>
+    <h1>Voice mirror</h1>
+    <p class="sub">Your pitch and your vowel, while you are making them. Everything stays in this
+      browser: no upload, no account, no server.</p>
+  </div>
+</header>
+
+<noscript><p class="warn">This page is all JavaScript. With it off there is nothing here.</p></noscript>
+<p id="insecure" class="warn" hidden>This page is not on a secure origin, so the browser will not
+  give it a microphone. Open it over https, or from localhost.</p>
+
+<section class="card">
+  <div class="bar">
+    <button id="start">Start</button>
+    <button id="rec" disabled>Record</button>
+    <button id="keep" disabled title="Turn the last thirty seconds the microphone heard into a take, whether or not Record was on.">Keep last 30s</button>
+    <button id="play" disabled>Play back</button>
+    <button id="cal" disabled title="Listen to the room for a few seconds and set the silence threshold from it.">Calibrate</button>
+    <button id="reset" title="Clear every figure on screen and start a fresh pass. Nothing recorded or loaded is lost.">Reset</button>
+    <span id="status" class="status"></span>
+  </div>
+
+  <div class="bar sub-bar">
+    <span class="label">Take</span>
+    <select id="format" disabled>
+      <option value="wav">WAV, lossless</option>
+      <option value="webm">Compressed</option>
+    </select>
+    <button id="download" disabled>Download</button>
+    <span id="take" class="dim">nothing recorded yet</span>
+  </div>
+
+  <div class="bar sub-bar">
+    <span class="label">Play a file</span>
+    <input type="file" id="pick" accept="audio/*,video/*" hidden>
+    <button id="pickBtn" class="ghost">From disk</button>
+    <span id="clip" class="dim">nothing loaded</span>
+  </div>
+
+  <details id="settings" class="settings">
+    <summary>Settings</summary>
+
+    <div class="set-grid">
+      <section>
+        <h3>Show</h3>
+        <div id="panels" class="panel-bar"></div>
+      </section>
+
+      <section>
+        <h3>Theme</h3>
+        <label>Follow the system, or pick one
+          <select id="theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </section>
+    </div>
+
+    <section>
+      <h3>Pitch bands</h3>
+      <p class="faint">The shaded ranges on the pitch trace, and the five zones the share bar
+        counts: below the lower band, the lower band, the gap between, the upper band, above the
+        upper. They are a reference, not a target. Use your clinician's if they differ.</p>
+      <div id="bands" class="bands"></div>
+      <div class="bar">
+        <button id="bandAdd" class="ghost">Add a band</button>
+        <button id="bandReset" class="ghost">Back to the shipped bands</button>
+      </div>
+    </section>
+
+    <section>
+      <h3>Reference vowels</h3>
+      <p class="faint">The diamonds on the vowel plane and the entries in Target. Load a JSON file
+        to use your own: your clinician's values, another language, or your own practice sentences.
+        It is read here and saved in this browser, never uploaded. The format is in
+        <a href="data/reference.md">data/reference.md</a>.</p>
+      <div class="bar">
+        <input type="file" id="pickRef" accept="application/json,.json" hidden>
+        <button id="pickRefBtn" class="ghost">Load reference</button>
+        <button id="refReset" class="ghost" disabled>Back to the shipped reference</button>
+        <span id="refName" class="dim"></span>
+      </div>
+    </section>
+
+    <section>
+      <h3>These settings</h3>
+      <p class="faint">Everything above lives in this browser and nowhere else. It does not follow
+        you to another machine, and clearing site data clears it. Export is how you move it, and how
+        you keep a copy.</p>
+      <div class="bar">
+        <button id="setExport" class="ghost">Export settings</button>
+        <input type="file" id="setImportFile" accept="application/json,.json" hidden>
+        <button id="setImport" class="ghost">Import settings</button>
+        <button id="setReset" class="ghost">Reset everything</button>
+      </div>
+    </section>
+  </details>
+
+  <div data-panel="pitch">
+    <div class="readout">
+      <span id="now" class="big">-</span>
+      <span id="median" class="dim"></span>
+    </div>
+    <canvas id="trace" height="190"></canvas>
+    <div id="share" class="share"></div>
+    <div id="legend" class="legend"></div>
+  </div>
+
+  <div data-panel="formants">
+    <div class="stat-head"><span>Formants</span><span id="formantNow" class="dim">-</span></div>
+    <canvas id="formants" height="150"></canvas>
+    <div id="formantKey" class="legend"></div>
+  </div>
+
+  <div data-panel="bright" class="stat">
+    <div class="stat-head"><span>Brightness (spectral centroid)</span><span id="brightNum">-</span></div>
+    <div id="brightBar" class="track"><div id="brightPin" class="pin"></div></div>
+    <div class="scale"><span id="brightLo"></span><span id="brightMed"></span><span id="brightHi"></span></div>
+  </div>
+
+  <div data-panel="intone" class="stat">
+    <div class="stat-head"><span>Intonation variability</span><span id="intoneSess">-</span></div>
+    <div class="stat-row"><span id="intoneBig" class="mid">-</span><span class="dim">ST</span></div>
+    <p class="faint">How far your pitch moves, in semitones. A flat delivery reads as masculine
+      whatever its height.</p>
+  </div>
+
+  <div data-panel="vtl" class="stat">
+    <div class="stat-head"><span>Vocal tract length</span><span id="vtlSess">-</span></div>
+    <div class="stat-row"><span id="vtlBig" class="mid">-</span><span class="dim">cm</span></div>
+    <p class="faint">From the spacing of F1 to F3. Shortens when the larynx rises. An index, not an
+      anatomy measurement.</p>
+  </div>
+
+  <div data-panel="plane">
+    <div class="bar sub-bar">
+      <label>Reference <select id="refLang"></select></label>
+      <label>Target <select id="target"><option value="">None</option></select></label>
+    </div>
+    <canvas id="plane" height="260"></canvas>
+    <div id="hint" class="hint"></div>
+    <p id="cite" class="faint"></p>
+  </div>
+
+  <div data-panel="say" class="stat" hidden>
+    <div class="stat-head"><span>Say</span><span><button id="sayNext" class="ghost tiny">Next</button></span></div>
+    <p id="sayLine" class="say"></p>
+  </div>
+</section>
+
+<footer class="foot">
+  <h2>What this is</h2>
+  <p><strong>A mirror, not a measurement.</strong> Press Start and it shows you two things as you
+    make them. The <strong>trace</strong> is your pitch against reference bands you can set yourself. The
+    <strong>plane</strong> below it is your vowel, F1 and F2, with published reference vowels as
+    diamonds. Read it as a mouth facing left: up is a higher tongue, left is a fronter one.</p>
+  <p><strong>Its numbers are not a measurement of you.</strong> The analysis runs on 85 milliseconds
+    of sound at a time, in a browser, through different algorithms from the ones a clinic uses.
+    Read it as a direction, never as a value, and never against a threshold.</p>
+  <p><strong>Running speech sits inside the diamonds</strong> even when nothing about a voice
+    differs, because vowels reduce toward the centre when they are not said in isolation. Read
+    position and spread, not distance to a diamond. The reference sets are averages of other
+    people reading isolated words, and neither of them is a target: where they sit is a fact,
+    which of them is a goal is between you and your clinician.</p>
+  <p><strong>Nothing leaves this browser.</strong> No upload, no analytics, no account, no server.
+    The microphone is released when you press Stop or close the tab, and every figure on screen
+    dies with it. A take exists only until you download it or leave.</p>
+  <p id="sources" class="faint"></p>
+  <p class="faint">Free software under the <a href="LICENSE">GNU AGPL v3 or later</a>. The whole page is the
+    source: nothing runs anywhere but here.</p>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

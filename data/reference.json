@@ -1,0 +1,39 @@
+{
+  "name": "Shipped reference",
+  "note": "The vowels are averages from published studies of other people's voices; the pitch bands are a practical reference, not a published norm. None of it is a target: where a band sits is a fact, which of them is a goal is between you and your clinician. Replace any of it in Settings.",
+  "sources": {
+    "pitch_bands": "Typical male and female speaking ranges as drawn by the voice-training apps in common clinical use. Not taken from a paper: a practical reference for placing a reading at a glance, not a published norm. Set your own in Settings.",
+    "en": "Hillenbrand, J. M., Getty, L. A., Clark, M. J. and Wheeler, K. (1995), Acoustic characteristics of American English vowels, JASA 97, 3099-3111. Means over the steady-state measurements in the study's published data file, 45 men and 48 women, h-V-d words read in isolation. A token whose formant the study marks unmeasurable is left out of its own average.",
+    "pt": "Escudero, P., Boersma, P., Rauber, A. S. and Bion, R. A. H. (2009), A cross-dialect acoustic description of vowels: Brazilian and European Portuguese, JASA 126, 1379-1393, Table I, Brazilian Portuguese. Geometric averages over ten women and ten men, one stressed vowel inside a nonce word in a carrier sentence."
+  },
+  "pitch_bands": [
+    { "name": "Typical male", "low": 80, "high": 140, "color": "rgba(106, 159, 181, 0.14)" },
+    { "name": "Typical female", "low": 175, "high": 275, "color": "rgba(184, 84, 80, 0.13)" }
+  ],
+  "vowel_reference": [
+    { "lang": "en", "vowel": "i",  "word": "heed",   "m_f1": 343, "m_f2": 2323, "w_f1": 437, "w_f2": 2761 },
+    { "lang": "en", "vowel": "ɪ",  "word": "hid",    "m_f1": 429, "m_f2": 2034, "w_f1": 484, "w_f2": 2369 },
+    { "lang": "en", "vowel": "eɪ", "word": "haid",   "m_f1": 476, "m_f2": 2090, "w_f1": 535, "w_f2": 2526 },
+    { "lang": "en", "vowel": "ɛ",  "word": "head",   "m_f1": 588, "m_f2": 1803, "w_f1": 727, "w_f2": 2063 },
+    { "lang": "en", "vowel": "æ",  "word": "had",    "m_f1": 591, "m_f2": 1930, "w_f1": 676, "w_f2": 2335 },
+    { "lang": "en", "vowel": "ɑ",  "word": "hod",    "m_f1": 756, "m_f2": 1309, "w_f1": 921, "w_f2": 1526 },
+    { "lang": "en", "vowel": "ɔ",  "word": "hawed",  "m_f1": 656, "m_f2": 1023, "w_f1": 804, "w_f2": 1188 },
+    { "lang": "en", "vowel": "oʊ", "word": "boat",   "m_f1": 498, "m_f2": 910,  "w_f1": 555, "w_f2": 1036 },
+    { "lang": "en", "vowel": "ʊ",  "word": "hood",   "m_f1": 469, "m_f2": 1123, "w_f1": 519, "w_f2": 1229 },
+    { "lang": "en", "vowel": "u",  "word": "who'd",  "m_f1": 380, "m_f2": 992,  "w_f1": 460, "w_f2": 1106 },
+    { "lang": "en", "vowel": "ʌ",  "word": "hud",    "m_f1": 621, "m_f2": 1181, "w_f1": 760, "w_f2": 1416 },
+    { "lang": "en", "vowel": "ɝ",  "word": "heard",  "m_f1": 475, "m_f2": 1379, "w_f1": 524, "w_f2": 1588 },
+    { "lang": "pt", "vowel": "i",  "word": "i",      "m_f1": 285, "m_f2": 2198, "w_f1": 307, "w_f2": 2676 },
+    { "lang": "pt", "vowel": "e",  "word": "ê",      "m_f1": 357, "m_f2": 2028, "w_f1": 425, "w_f2": 2468 },
+    { "lang": "pt", "vowel": "ɛ",  "word": "é",      "m_f1": 518, "m_f2": 1831, "w_f1": 646, "w_f2": 2271 },
+    { "lang": "pt", "vowel": "a",  "word": "a",      "m_f1": 683, "m_f2": 1329, "w_f1": 910, "w_f2": 1627 },
+    { "lang": "pt", "vowel": "ɔ",  "word": "ó",      "m_f1": 532, "m_f2": 927,  "w_f1": 681, "w_f2": 1054 },
+    { "lang": "pt", "vowel": "o",  "word": "ô",      "m_f1": 372, "m_f2": 804,  "w_f1": 442, "w_f2": 893 },
+    { "lang": "pt", "vowel": "u",  "word": "u",      "m_f1": 310, "m_f2": 761,  "w_f1": 337, "w_f2": 812 }
+  ],
+  "languages": {
+    "pt": "Brazilian Portuguese (Escudero et al. 2009)",
+    "en": "American English (Hillenbrand et al. 1995)"
+  },
+  "sentences": []
+}

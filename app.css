@@ -1,0 +1,186 @@
+/* Tokens first, everything else against them. Dark follows the system and the
+   toggle overrides it, which is why the dark values are declared twice: the
+   media query for the system setting, the attribute for the toggle. */
+:root {
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --border: #dedcd6;
+  --ink: #1a1a19;
+  --ink-dim: #55534e;
+  --ink-faint: #85837c;
+  --accent: #2a78d6;
+  --warn: #b3261e;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131312;
+    --surface: #1c1c1a;
+    --border: #35342f;
+    --ink: #f2f1ec;
+    --ink-dim: #b4b2a8;
+    --ink-faint: #85837c;
+    --accent: #6ba6f0;
+    --warn: #f28c85;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131312;
+  --surface: #1c1c1a;
+  --border: #35342f;
+  --ink: #f2f1ec;
+  --ink-dim: #b4b2a8;
+  --ink-faint: #85837c;
+  --accent: #6ba6f0;
+  --warn: #f28c85;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  max-width: 940px;
+  margin-inline: auto;
+}
+
+h1 { font-size: 1.25rem; margin: 0; }
+h2 { font-size: 1rem; margin: 0 0 .4em 0; }
+
+.head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.sub { margin: .2em 0 0 0; color: var(--ink-dim); font-size: .88rem; max-width: 60ch; }
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+  margin: 14px 0;
+}
+
+.bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.sub-bar { font-size: .85rem; }
+.panel-bar { display: flex; flex-wrap: wrap; font-size: .85rem; color: var(--ink-dim); gap: 6px 14px; }
+.panel-bar label { display: flex; gap: .35em; align-items: center; cursor: pointer; }
+.spacer { margin-left: auto; }
+.label { color: var(--ink-dim); }
+
+button, select {
+  font: inherit;
+  font-size: .9em;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+button:hover:not(:disabled), select:hover { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.ghost { padding: 3px 10px; font-size: .85em; }
+button.tiny { padding: 1px 8px; font-size: .78em; }
+label { display: inline-flex; gap: .4em; align-items: center; }
+
+.status { margin-left: auto; text-align: right; font-size: .82rem; color: var(--ink-dim); max-width: 42ch; }
+.status.bad { color: var(--warn); }
+.warn { color: var(--warn); font-size: .88rem; }
+
+.dim { color: var(--ink-dim); font-size: .85rem; }
+.faint { color: var(--ink-faint); font-size: .78rem; margin: .3em 0 0 0; }
+
+.readout { display: flex; gap: 20px; align-items: baseline; margin-bottom: 4px; }
+.big { font-size: 2.1rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 3.4em; }
+.mid { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 4em; }
+
+canvas { width: 100%; display: block; }
+#trace { height: 190px; }
+#plane { height: 260px; }
+#formants { height: 150px; margin-top: 4px; }
+
+.share {
+  display: flex; height: 14px; margin-top: 10px;
+  border-radius: 3px; overflow: hidden; background: var(--border);
+}
+.share > div { width: 0; transition: width .2s; }
+.legend {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  margin-top: 6px; font-size: .76rem; color: var(--ink-dim);
+}
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+.stat { margin-top: 14px; }
+.stat-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: .8rem; color: var(--ink-dim);
+}
+.stat-row { display: flex; gap: 10px; align-items: baseline; margin-top: 2px; }
+.stat p { margin: .2em 0 0 0; }
+
+.track { position: relative; height: 10px; margin-top: 4px; border-radius: 3px; background: var(--border); }
+.pin {
+  position: absolute; top: -3px; width: 3px; height: 16px;
+  border-radius: 2px; background: var(--accent); left: 0; transition: left .12s;
+}
+.scale { display: flex; justify-content: space-between; font-size: .72rem; color: var(--ink-faint); margin-top: 2px; }
+
+.hint {
+  font-size: .85rem; color: var(--ink-dim); margin-top: 6px;
+  min-height: 4.2em; white-space: pre-line; line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.say { font-size: 1.15rem; margin: .2em 0 0 0; }
+
+.foot { color: var(--ink-dim); font-size: .86rem; }
+.foot p { max-width: 72ch; }
+.foot strong { color: var(--ink); }
+.foot a { color: var(--accent); }
+
+/* Settings: shut by default, because none of it is needed to start. */
+.settings {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0 0 14px 0;
+  font-size: .88rem;
+}
+.settings > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  color: var(--ink-dim);
+  list-style-position: inside;
+}
+.settings > summary:hover { color: var(--ink); }
+.settings[open] > summary { border-bottom: 1px solid var(--border); }
+.settings section { padding: 10px; border-top: 1px solid var(--border); }
+.settings section:first-of-type { border-top: 0; }
+.settings h3 { font-size: .85rem; margin: 0 0 .3em 0; color: var(--ink); }
+.settings p { margin: 0 0 .6em 0; max-width: 68ch; }
+.settings a { color: var(--accent); }
+.set-grid { display: flex; flex-wrap: wrap; }
+.set-grid > section { flex: 1 1 16em; border-top: 0; }
+
+.bands { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.band { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.band input[type="text"] { flex: 1 1 9em; min-width: 7em; }
+.band input[type="number"] { width: 5.5em; }
+.band input[type="color"] { width: 2.4em; padding: 2px; height: 2em; }
+.band input {
+  font: inherit; font-size: .9em; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 8px;
+}
+.band .drop { padding: 3px 9px; }
+.band span { color: var(--ink-faint); font-size: .8em; }
+
+[hidden] { display: none !important; }
+
+@media (max-width: 560px) {
+  body { padding: 12px; }
+  .status { margin-left: 0; text-align: left; width: 100%; }
+  .big { font-size: 1.8rem; }
+}
