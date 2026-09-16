@@ -222,7 +222,9 @@ select { max-width: 100%; }
 canvas { width: 100%; display: block; }
 #trace { height: 190px; }
 #plane { height: 280px; }
-#plane.armed { cursor: crosshair; }
+#plane.armed { cursor: crosshair; touch-action: none; }
+.tone-bar input[type="range"] { width: 7em; accent-color: var(--accent); vertical-align: middle; }
+.tone-bar output { display: inline-block; min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; }
 .sub-bar .check { margin: 0; }
 .tone-bar { margin-top: -2px; }
 .tone-bar input[type="number"] {

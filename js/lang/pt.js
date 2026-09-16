@@ -115,13 +115,18 @@ export default {
     <p>Escolha um Alvo para ver a que distância você está dos dois pontos de referência daquela vogal, e
     para que lado se mover. Nenhum dos dois é uma meta escolhida pela página.</p>
     <p><b>Vogal de teste</b>: marque a opção e clique em qualquer lugar do plano para ouvir uma vogal
-    sintética com F1 e F2 naquele ponto, no tom indicado ao lado. F3 e acima são posicionados
-    automaticamente. Ela passa pela mesma análise de uma gravação, então o ponto deve cair na mira, o
-    que serve para conferir a página e para ouvir como soa uma posição. Onde F2 fica abaixo de F1 ou
-    muito perto dele não existe vogal real, e o ponto pode não acompanhar.</p>`,
+    sintética com F1 e F2 naquele ponto, ou arraste para ouvi-la deslizar. Ela passa pela mesma análise
+    de uma gravação, mas nunca entra na sua sessão: os seus números continuam como estavam.</p>
+    <p>Um clique dura um instante e termina comparando o que foi pedido com o que a análise ouviu, na
+    linha de status e como um anel verde ligado à mira. Um deslize não é comparado. Trato vocal
+    define F3 e acima, de modo que o painel de comprimento do trato vocal o lê de volta, e Voz natural
+    acrescenta a pequena irregularidade de uma voz real. Onde F2 fica abaixo de F1 ou muito perto dele
+    não existe vogal real, e o ponto pode não acompanhar.</p>`,
   "h.reference": "Referência",
   "h.toneOn": "Vogal de teste",
-  "h.toneHint": "Clique no plano para ouvir.",
+  "h.toneHint": "Clique no plano para ouvir, ou arraste para deslizar.",
+  "h.toneTract": "Trato vocal",
+  "h.toneNatural": "Voz natural",
   "h.tonePitch": "Tom",
   "h.toneAgain": "Tocar de novo",
   "h.target": "Alvo",
@@ -183,7 +188,6 @@ export default {
   "clip.loaded": "carregado: {name}",
   "clip.justRecorded": "a gravação que acabou de ser feita",
   "clip.lastSeconds": "os últimos {secs} segundos",
-  "clip.tone": "uma vogal de teste, F1 {f1} F2 {f2} Hz a {f0} Hz",
 
   "ref.none": "Nenhum",
   "ref.using": "usando {name}",
@@ -243,7 +247,10 @@ export default {
   "status.playDone": "Reprodução terminada.",
   "status.decodeFailed": "Não foi possível decodificar {name}: {error}",
   "status.playing": "Reproduzindo {name} pela mesma análise, {secs}s",
-  "status.tone": "Vogal de teste: F1 {f1}, F2 {f2}, F3 {f3} Hz, tom {f0} Hz.",
+  "status.testHeard": "Vogal de teste pedida em F1 {af1}, F2 {af2} a {af0} Hz (F3 {af3}, trato {tract} cm); ouvida em F1 {hf1}, F2 {hf2} a {hf0} Hz, {bark} Bark de diferença.",
+  "status.testNothing": "Vogal de teste pedida em F1 {af1}, F2 {af2} a {af0} Hz; nada ficou estável por tempo suficiente para comparar.",
+  "status.glideDone": "Deslize terminado em F1 {f1}, F2 {f2} Hz. Uma vogal em movimento não é comparada.",
+  "status.noLiveVoice": "Este navegador não roda a voz de teste ao vivo, então arrastar não desliza. Clicar continua tocando.",
   "status.cleared": "Medições zeradas.",
   "status.clearedListening": "Medições zeradas. Ainda ouvindo.",
   "status.downloaded": "Baixado: {name}",

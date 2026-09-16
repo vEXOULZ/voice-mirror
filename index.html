@@ -302,10 +302,13 @@
       <p>Pick a Target to see how far you are from both reference points for that vowel, and which
         way to move. Neither point is a goal the page chooses for you.</p>
       <p><b>Test vowel</b>: tick it, then click anywhere on the plane to hear a synthetic vowel with
-        its F1 and F2 at that spot, at the pitch beside it. F3 and above are placed for you. It plays
-        through the same analysis as a recording, so the dot should land on the crosshair, which is a
-        way to check the page, and to hear what a position sounds like. Where F2 sits below F1 or
-        very near it, no real vowel lives, and the dot may not follow.</p>
+        its F1 and F2 at that spot, or drag to hear it glide. It plays through the same analysis as a
+        recording, but never into your session: your figures stay as they were.</p>
+      <p>A click holds for a moment and ends by comparing what was asked with what the analysis
+        heard, in the status line and as a green ring tied to the crosshair. A glide is not
+        compared. Vocal tract sets F3 and above, so the vocal tract length panel's estimate reads it
+        back, and Natural voice adds the small unevenness a real voice has. Where F2 sits below F1
+        or very near it, no real vowel lives, and the dot may not follow.</p>
     </div>
     <div class="bar sub-bar">
       <label><span data-i18n="h.reference">Reference</span> <select id="refLang"></select></label>
@@ -314,9 +317,14 @@
         <span data-i18n="h.toneOn">Test vowel</span></label>
     </div>
     <div id="toneBar" class="bar sub-bar tone-bar" hidden>
-      <span class="dim" data-i18n="h.toneHint">Click the plane to hear it.</span>
+      <span class="dim" data-i18n="h.toneHint">Click the plane to hear it, or drag to glide.</span>
       <label><span data-i18n="h.tonePitch">Pitch</span>
         <input type="number" id="tonePitch" min="60" max="500" step="1" value="180"> Hz</label>
+      <label><span data-i18n="h.toneTract">Vocal tract</span>
+        <input type="range" id="toneTract" min="12" max="20" step="0.5" value="17">
+        <output id="toneTractOut" for="toneTract">17.0</output> cm</label>
+      <label class="check"><input type="checkbox" id="toneNatural">
+        <span data-i18n="h.toneNatural">Natural voice</span></label>
       <button id="toneAgain" class="ghost" disabled data-i18n="h.toneAgain">Play again</button>
     </div>
     <canvas id="plane" height="260" role="img" data-i18n-attr="aria-label:h.planeLabel"

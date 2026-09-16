@@ -178,15 +178,21 @@ const planeScale = (w, h) => ({
 // The reverse, for a click: CSS pixels inside the canvas to [F1, F2], or null
 // outside the plotted square. Worked from the same numbers the drawing uses,
 // so the sound made is the one under the pointer.
-export const planeAt = (cv, x, y) => {
+// With `clamp`, a point outside is pulled to the nearest edge instead, for a
+// drag that runs off the plot.
+export const planeAt = (cv, x, y, clamp = false) => {
   const w = cv.clientWidth, h = cv.clientHeight;
+  if (clamp) {
+    x = Math.min(w - PR, Math.max(PL, x));
+    y = Math.min(h - PB, Math.max(PT, y));
+  }
   if (x < PL || x > w - PR || y < PT || y > h - PB) return null;
   const f2 = PLANE_F2[0] + (1 - (x - PL) / (w - PL - PR)) * (PLANE_F2[1] - PLANE_F2[0]);
   const f1 = PLANE_F1[0] + (y - PT) / (h - PT - PB) * (PLANE_F1[1] - PLANE_F1[0]);
   return [f1, f2];
 };
 
-export const drawPlane = (cv, { rows, target, trail, smooth, steady, probe }) => {
+export const drawPlane = (cv, { rows, target, trail, smooth, steady, probe, heard }) => {
   const g = cv.getContext("2d");
   const [w, h] = fit(cv, g);
   if (!w || !h) return;
@@ -274,6 +280,16 @@ export const drawPlane = (cv, { rows, target, trail, smooth, steady, probe }) =>
     g.moveTo(x - 14, y); g.lineTo(x - 4, y); g.moveTo(x + 4, y); g.lineTo(x + 14, y);
     g.moveTo(x, y - 14); g.lineTo(x, y - 4); g.moveTo(x, y + 4); g.lineTo(x, y + 14);
     g.stroke();
+    // And where the analysis heard it, after a still test: a hollow ring in
+    // the voice's colour, tied to the crosshair, so a miss has a size.
+    if (heard) {
+      const hx = X(heard[1]), hy = Y(heard[0]);
+      g.strokeStyle = VOICE; g.lineWidth = 1.5;
+      g.setLineDash([3, 3]);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(hx, hy); g.stroke();
+      g.setLineDash([]);
+      g.beginPath(); g.arc(hx, hy, 6, 0, 2 * Math.PI); g.stroke();
+    }
     g.globalAlpha = 1;
   }
 

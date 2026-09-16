@@ -47,7 +47,6 @@ export default {
   "clip.loaded": "loaded {name}",
   "clip.justRecorded": "the take just recorded",
   "clip.lastSeconds": "the last {secs} seconds",
-  "clip.tone": "a test vowel, F1 {f1} F2 {f2} Hz at {f0} Hz",
 
   // reference
   "ref.none": "None",
@@ -111,7 +110,10 @@ export default {
   "status.playDone": "Playback finished.",
   "status.decodeFailed": "Could not decode {name}: {error}",
   "status.playing": "Playing {name} through the same analysis, {secs}s",
-  "status.tone": "Test vowel: F1 {f1}, F2 {f2}, F3 {f3} Hz, pitch {f0} Hz.",
+  "status.testHeard": "Test vowel asked F1 {af1}, F2 {af2} at {af0} Hz (F3 {af3}, tract {tract} cm); heard F1 {hf1}, F2 {hf2} at {hf0} Hz, {bark} Bark off.",
+  "status.testNothing": "Test vowel asked F1 {af1}, F2 {af2} at {af0} Hz; nothing held steady long enough to compare.",
+  "status.glideDone": "Glide ended at F1 {f1}, F2 {f2} Hz. A moving vowel is not compared.",
+  "status.noLiveVoice": "This browser cannot run the live test voice, so a drag does not glide. A click still plays.",
   "status.cleared": "Measurements cleared.",
   "status.clearedListening": "Measurements cleared. Still listening.",
   "status.downloaded": "Downloaded {name}",

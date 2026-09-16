@@ -16,7 +16,7 @@ import { encodeWav, floatToInt16, int16ToFloat } from "../js/wav.js";
 import { RMS_GATE, WORK_RATE, F0_FLOOR, F0_CEILING } from "../js/constants.js";
 import { normalise, defaults, fromFile, toFile, hexToBand, bandToHex, PANELS } from "../js/settings.js";
 import { parseReference, inBand } from "../js/reference.js";
-import { synthVowel } from "../js/synth.js";
+import { synthVowel, upperFormants } from "../js/synth.js";
 
 const RATE = WORK_RATE;   // the working rate everything downstream sees
 const LEN = 1024;         // one analysis window, 4096 decimated by four
@@ -190,10 +190,51 @@ test("a test vowel is heard back where it was asked for", () => {
   }
 });
 
+// The same path, over a whole held vowel: the median of every analysis window
+// past the onset, the way the page's own comparison reads a click.
+const heardOver = (x, rate) => {
+  const dec = Math.round(rate / WORK_RATE), taps = makeTaps(rate);
+  const hz = [], f1 = [], f2 = [], f3 = [];
+  for (let at = Math.round(0.3 * rate); at + 4096 < x.length - 0.2 * rate; at += 2400) {
+    const w = decimate(x.subarray(at, at + 4096), dec, taps, new Float32Array(Math.floor(4096 / dec)));
+    const p = detectPitch(w, rate / dec, RMS_GATE);
+    const f = formants(w, rate / dec, null);
+    if (p != null) hz.push(p);
+    if (f) { f1.push(f[0]); f2.push(f[1]); if (f[2] != null) f3.push(f[2]); }
+  }
+  return { hz: median(hz), f1: median(f1), f2: median(f2), f3: median(f3), voiced: hz.length };
+};
+
+// A seeded generator, so the natural voice is the same on every run.
+const seeded = seed => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+test("a natural test vowel is still heard back where it was asked for", () => {
+  const rate = 48000;
+  for (const [f0, f1, f2] of [[120, 300, 2200], [200, 700, 1300], [180, 350, 850], [250, 500, 1800]]) {
+    const h = heardOver(synthVowel({ f0, f1, f2, natural: true, rate, random: seeded(7) }), rate);
+    const at = f0 + "/" + f1 + "/" + f2;
+    assert.ok(h.voiced >= 15, at + " pitch was found in only " + h.voiced + " windows");
+    assert.ok(Math.abs(h.hz - f0) < f0 * 0.03, at + " pitch came back as " + h.hz);
+    assert.ok(Math.hypot(bark(h.f1) - bark(f1), bark(h.f2) - bark(f2)) < 0.5,
+              at + " came back as " + h.f1.toFixed(0) + "/" + h.f2.toFixed(0));
+  }
+});
+
+test("the vocal tract length asked for is the length read back", () => {
+  const rate = 48000;
+  for (const tract of [14, 17]) {
+    const [f3] = upperFormants(500, 1500, tract);
+    assert.ok(Math.abs(vtl(500, f3) - tract) < 1e-9, "placed F3 gives " + vtl(500, f3));
+    const h = heardOver(synthVowel({ f0: 180, f1: 500, f2: 1500, tract, rate }), rate);
+    assert.ok(Math.abs(vtl(h.f1, h.f3) - tract) < 1, tract + " cm read back as " + vtl(h.f1, h.f3).toFixed(1));
+  }
+  assert.ok(upperFormants(300, 2400, 17)[0] >= 2700, "F3 must clear a high F2");
+});
+
 test("a test vowel fades in and out and stays under full scale", () => {
   const x = synthVowel({ f0: 180, f1: 500, f2: 1500, seconds: 0.5, rate: 48000 });
   assert.equal(x.length, 24000);
-  assert.equal(x[0], 0);
+  assert.ok(Math.abs(x[0]) < 0.01 && Math.abs(x[x.length - 1]) < 0.01, "the ends must be near silent");
   let peak = 0;
   for (const v of x) peak = Math.max(peak, Math.abs(v));
   assert.ok(peak <= 0.5 + 1e-6 && peak > 0.4, "peak " + peak);
@@ -372,6 +413,15 @@ test("settings with nothing usable are the defaults", () => {
   assert.deepEqual(normalise(null), defaults());
   assert.deepEqual(normalise("garbage"), defaults());
   assert.equal(normalise({ bands: [] }).bands, null, "an empty band list must mean 'use the reference's'");
+});
+
+test("test vowel settings keep to their ranges", () => {
+  const d = defaults();
+  assert.equal(d.toneTract, 17);
+  assert.equal(d.toneNatural, false);
+  assert.equal(normalise({ toneTract: 14.2 }).toneTract, 14, "rounded to the slider's half steps");
+  assert.equal(normalise({ toneTract: 40 }).toneTract, 17, "out of range falls back");
+  assert.equal(normalise({ toneNatural: true }).toneNatural, true);
 });
 
 test("the outside-every-band meter is off unless turned on", () => {

@@ -2,15 +2,14 @@
 
 import {
   FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX, F0_CEILING,
-  F0_FLOOR, TONE_SECONDS
+  F0_FLOOR, TONE_SECONDS, TONE_SETTLE_MS, TONE_TRACT_RANGE
 } from "./constants.js";
 import {
-  decimate, detectPitch, formants, centroid, vtl, median, createVowelTracker
+  decimate, detectPitch, formants, centroid, vtl, median, bark, createVowelTracker
 } from "./dsp.js";
 import { loadShipped, parseReference, inBand, langsOf } from "./reference.js";
 import { drawTrace, drawFormants, drawPlane, planeAt } from "./draw.js";
 import { synthVowel, upperFormants } from "./synth.js";
-import { encodeWav } from "./wav.js";
 import { createEngine } from "./audio.js";
 import { createUI } from "./ui.js";
 import * as store from "./settings.js";
@@ -20,6 +19,9 @@ const ui = createUI();
 const el = ui.el;
 const engine = createEngine();
 const tracker = createVowelTracker();
+// A test vowel is followed by a tracker of its own, so the dot it moves and the
+// frames it measures never touch your session.
+const testTracker = createVowelTracker();
 
 const EMPTY_REF = { name: "", bands: [], vowels: [], languages: {}, sentences: [], sources: {}, dropped: [] };
 let shipped = EMPTY_REF;
@@ -64,8 +66,12 @@ const s = {
   counts: [], outside: 0
 };
 let frame = 0, last = 0, raf = 0, lastFormant = null, lastHz = null;
-// The last place a test vowel was asked for, as [F1, F2].
-let probe = null;
+// The last place a test vowel was asked for, and where it was heard, as
+// [F1, F2]. And the test sounding now, if one is.
+let probe = null, heard = null, test = null;
+// Until when frames are still the test's release fading out, and kept out of
+// the session with the rest of it.
+let testTailUntil = 0;
 
 const resetSession = () => {
   ui.blank();
@@ -108,10 +114,12 @@ const paint = () => {
     drawFormants(el.formants, { frames: s.track, cursor: s.cursor });
   }
   if (ui.panelShown("plane")) {
+    const tr = test ? testTracker : tracker;
     drawPlane(el.plane, {
       rows: rowsForLang(), target: ui.targetOf(ref),
-      trail: tracker.trail, smooth: tracker.smooth, steady: tracker.steady,
-      probe: el.toneOn.checked ? probe : null
+      trail: tr.trail, smooth: tr.smooth, steady: tr.steady,
+      probe: el.toneOn.checked ? probe : null,
+      heard: el.toneOn.checked && !test ? heard : null
     });
   }
 };
@@ -297,6 +305,9 @@ const saveFile = (text, name) => {
 const applyAll = () => {
   ui.applyTheme(settings.theme);
   el.tonePitch.value = settings.tonePitch;
+  el.toneTract.value = settings.toneTract;
+  el.toneTractOut.textContent = Number(settings.toneTract).toFixed(1);
+  el.toneNatural.checked = settings.toneNatural;
   for (const r of el.lang.querySelectorAll("input")) r.checked = r.value === setLang(settings.lang);
   ui.relabel();
   labelButtons();
@@ -377,6 +388,9 @@ const tick = ts => {
     else { paint(); return; }
   }
 
+  if (test) { testFrame(x, ts); return; }
+  if (performance.now() < testTailUntil) { paint(); return; }
+
   const rate = engine.workRate();
   const hz = detectPitch(x, rate, rmsGate);
   if (hz != null) {
@@ -425,11 +439,27 @@ const tick = ts => {
   }
 };
 
+// One frame of a test vowel: tracked on its own, and kept for the comparison
+// only once the onset has passed and only while the pointer holds still.
+const testFrame = (x, ts) => {
+  const rate = engine.workRate();
+  const hz = detectPitch(x, rate, rmsGate);
+  const f = hz == null ? null : formants(x, rate, testTracker.now);
+  testTracker.push(f, ts);
+  testTracker.glide();
+  if (!test.moved && ts - test.startedAt > TONE_SETTLE_MS) {
+    if (hz != null) test.hz.push(hz);
+    if (f) { test.f1.push(f[0]); test.f2.push(f[1]); }
+  }
+  paint();
+};
+
 const runLoop = () => { if (!raf) raf = requestAnimationFrame(tick); };
 const stopLoop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
 
 // --- buttons -------------------------------------------------------------
 el.start.onclick = async () => {
+  endTest(true);
   if (engine.listening()) {
     // Only the microphone stops. A take already recorded stays downloadable,
     // and the loop keeps running if something is being played.
@@ -523,6 +553,7 @@ const playLoaded = async () => {
 };
 
 el.play.onclick = async () => {
+  endTest(true);
   if (engine.playing()) {
     engine.stopPlayback();
     labelButtons();
@@ -537,35 +568,92 @@ el.play.onclick = async () => {
 };
 
 // --- the test vowel --------------------------------------------------------
-// A click on the plane makes a vowel with its F1 and F2 at that spot, at the
-// pitch set beside it, and plays it through the same analysis as a recording.
-// It becomes the loaded clip, so Play back repeats it and Download is not
-// involved: it is a test signal, not a take.
+// Press on the plane and a vowel sounds with its F1 and F2 under the pointer,
+// at the pitch, tract length and voice set beside it, through the same
+// analysis as a recording. Drag and it glides after the pointer. Let go at
+// once and it holds for TONE_SECONDS; hold still and it lasts as long as you
+// do. A still test ends with a comparison of what was asked and what was
+// heard. Neither kind touches your session, your loaded file or your take.
 const tonePitch = () => {
   const v = Math.round(Number(el.tonePitch.value));
   return isFinite(v) ? Math.min(F0_CEILING, Math.max(F0_FLOOR, v)) : settings.tonePitch;
 };
+const toneTract = () => {
+  const v = Number(el.toneTract.value);
+  return isFinite(v) ? Math.min(TONE_TRACT_RANGE[1], Math.max(TONE_TRACT_RANGE[0], v)) : settings.toneTract;
+};
+const toneParams = at => ({
+  f0: tonePitch(), f1: at[0], f2: at[1], tract: toneTract(), natural: el.toneNatural.checked
+});
 
-const playTone = async at => {
+const beginTest = async at => {
+  endTest(true);
   probe = at;
-  const [f1, f2] = at.map(Math.round);
-  const f0 = tonePitch();
-  const rate = engine.ctx ? engine.ctx.sampleRate : 48000;
-  const wav = encodeWav(synthVowel({ f0, f1, f2, seconds: TONE_SECONDS, rate }), rate);
-  const vars = { f0, f1, f2, f3: upperFormants(f2)[0] };
-  if (engine.playing()) engine.stopPlayback();
-  engine.loadClip(t("clip.tone", vars), wav);
-  ui.showClip(engine.clip.name);
-  el.play.disabled = false;
+  heard = null;
+  const asked = toneParams(at);
+  const my = test = {
+    asked, moved: false, live: true, timer: 0,
+    downAt: performance.now(), startedAt: performance.now(), hz: [], f1: [], f2: []
+  };
+  testTracker.reset();
   el.toneAgain.disabled = false;
-  if (await playLoaded() != null) say("status.tone", vars);
+  const live = await engine.voiceStart(asked);
+  if (test !== my) return;
+  if (!live) {
+    // Rendered whole and played instead. It cannot glide, and says so once.
+    my.live = false;
+    if (!beginTest.warned) { beginTest.warned = true; say("status.noLiveVoice"); }
+    await engine.playSamples(
+      synthVowel({ ...asked, seconds: TONE_SECONDS, rate: engine.ctx.sampleRate }),
+      () => { if (test === my) endTest(); });
+    labelButtons();
+  }
+  my.startedAt = performance.now();
+  runLoop();
+};
+
+// On letting go: a still press is held out to TONE_SECONDS, a glide stops.
+const releaseTest = () => {
+  if (!test || !test.live) return;
+  const my = test;
+  const left = my.moved ? 0 : Math.max(0, TONE_SECONDS * 1000 - (performance.now() - my.downAt));
+  my.timer = setTimeout(() => { if (test === my) endTest(); }, left);
+};
+
+// `quiet` is for a test cut short by something else: no comparison is made.
+const endTest = (quiet = false) => {
+  const done = test;
+  if (!done) return;
+  test = null;
+  clearTimeout(done.timer);
+  testTailUntil = performance.now() + 150;
+  if (done.live) engine.voiceStop();
+  else if (engine.playing()) engine.stopPlayback();
+  labelButtons();
+  if (!engine.listening() && !engine.playing()) stopLoop();
+  if (!quiet) reportTest(done);
   repaint();
+};
+
+const reportTest = done => {
+  const a = done.asked, r = Math.round;
+  const base = {
+    af0: r(a.f0), af1: r(a.f1), af2: r(a.f2),
+    af3: r(upperFormants(a.f1, a.f2, a.tract)[0]), tract: a.tract.toFixed(1)
+  };
+  if (done.moved) { say("status.glideDone", { f1: r(probe[0]), f2: r(probe[1]) }); return; }
+  if (done.f1.length < 3 || done.hz.length < 3) { say("status.testNothing", base, true); return; }
+  const h1 = median(done.f1), h2 = median(done.f2), h0 = median(done.hz);
+  heard = [h1, h2];
+  const off = Math.hypot(bark(h1) - bark(a.f1), bark(h2) - bark(a.f2));
+  say("status.testHeard", { ...base, hf0: r(h0), hf1: r(h1), hf2: r(h2), bark: off.toFixed(2) });
 };
 
 const armTone = () => {
   el.plane.classList.toggle("armed", el.toneOn.checked);
   el.toneBar.hidden = !el.toneOn.checked;
   el.toneAgain.disabled = !el.toneOn.checked || !probe;
+  if (!el.toneOn.checked) endTest(true);
   repaint();
 };
 el.toneOn.onchange = armTone;
@@ -574,19 +662,66 @@ el.toneOn.onchange = armTone;
 el.toneOn.checked = false;
 armTone();
 
-el.plane.addEventListener("click", e => {
-  if (!el.toneOn.checked) return;
+const local = e => {
   const r = el.plane.getBoundingClientRect();
-  const at = planeAt(el.plane, e.clientX - r.left, e.clientY - r.top);
-  if (at) playTone(at);
+  return [e.clientX - r.left, e.clientY - r.top];
+};
+let drag = null;
+
+el.plane.addEventListener("pointerdown", e => {
+  if (!el.toneOn.checked || e.button > 0) return;
+  const at = planeAt(el.plane, ...local(e));
+  if (!at) return;
+  e.preventDefault();
+  try { el.plane.setPointerCapture(e.pointerId); } catch (err) {}
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  beginTest(at);
 });
 
-el.toneAgain.onclick = () => { if (probe) playTone(probe); };
+el.plane.addEventListener("pointermove", e => {
+  if (!drag || e.pointerId !== drag.id || !test || !test.live) return;
+  // A few pixels of wobble in a click is not a glide.
+  if (!test.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
+  test.moved = true;
+  probe = planeAt(el.plane, ...local(e), true);
+  engine.voiceSet(toneParams(probe));
+});
+
+const letGo = e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  drag = null;
+  releaseTest();
+};
+el.plane.addEventListener("pointerup", letGo);
+el.plane.addEventListener("pointercancel", letGo);
+
+el.toneAgain.onclick = () => {
+  if (!probe) return;
+  beginTest(probe);
+  releaseTest();
+};
+
+// Changes are heard at once on a test still sounding, and remembered.
+const retone = () => { if (test && test.live && probe) engine.voiceSet(toneParams(probe)); };
 
 el.tonePitch.onchange = () => {
   el.tonePitch.value = tonePitch();
   settings.tonePitch = tonePitch();
   persist();
+  retone();
+};
+
+const showTract = () => { el.toneTractOut.textContent = toneTract().toFixed(1); };
+el.toneTract.oninput = () => { showTract(); retone(); };
+el.toneTract.onchange = () => {
+  settings.toneTract = toneTract();
+  persist();
+};
+
+el.toneNatural.onchange = () => {
+  settings.toneNatural = el.toneNatural.checked;
+  persist();
+  retone();
 };
 
 el.cal.onclick = () => {

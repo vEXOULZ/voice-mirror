@@ -23,7 +23,7 @@ export const createUI = () => {
                     "brightNum", "brightBar", "brightPin", "brightLo", "brightMed", "brightHi",
                     "intoneBig", "intoneSess", "vtlBig", "vtlSess", "refLang", "target",
                     "plane", "hint", "cite", "sayNext", "sayLine", "sources", "theme", "lang",
-                    "insecure", "bands", "bandAdd", "bandReset", "showOutside", "toneOn", "toneBar", "tonePitch", "toneAgain", "setExport", "setImport",
+                    "insecure", "bands", "bandAdd", "bandReset", "showOutside", "toneOn", "toneBar", "tonePitch", "toneTract", "toneTractOut", "toneNatural", "toneAgain", "setExport", "setImport",
                     "setImportFile", "setReset"]) {
     el[id] = $(id);
   }

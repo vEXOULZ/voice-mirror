@@ -39,6 +39,8 @@ export const defaults = () => ({
   showOutside: false,
   // The pitch the test vowel is made at.
   tonePitch: 180,
+  toneTract: 17,
+  toneNatural: false,
   reference: null
 });
 
@@ -54,6 +56,9 @@ export const normalise = raw => {
   if (typeof raw.showOutside === "boolean") out.showOutside = raw.showOutside;
   const tp = Number(raw.tonePitch);
   if (raw.tonePitch != null && isFinite(tp) && tp >= 60 && tp <= 500) out.tonePitch = Math.round(tp);
+  const tt = Number(raw.toneTract);
+  if (raw.toneTract != null && isFinite(tt) && tt >= 12 && tt <= 20) out.toneTract = Math.round(tt * 2) / 2;
+  if (typeof raw.toneNatural === "boolean") out.toneNatural = raw.toneNatural;
 
   if (raw.panels && typeof raw.panels === "object") {
     for (const [k] of PANELS) if (k in raw.panels) out.panels[k] = !!raw.panels[k];

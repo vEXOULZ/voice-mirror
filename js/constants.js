@@ -133,6 +133,12 @@ export const PLANE_F2 = [200, 4000], PLANE_F1 = [200, 1250];
 // The test vowel: how long one click sounds, and the pitch range it accepts,
 // which is the range the pitch tracker can report.
 export const TONE_SECONDS = 1.5, TONE_PITCH = 180;
+// The vocal tract length the test vowel is made with, in cm, and the range
+// the slider offers. 17 is about an adult man's, 14 about an adult woman's.
+export const TONE_TRACT = 17, TONE_TRACT_RANGE = [12, 20];
+// How long a test vowel sounds before its frames count towards the comparison:
+// the onset, and the tracker's own settling, are not what is being checked.
+export const TONE_SETTLE_MS = 250;
 export const REF_TONE = { m: "rgb(74,144,194)", w: "rgb(232,111,166)" };
 export const REF_NAME = { m: "men", w: "women" };
 

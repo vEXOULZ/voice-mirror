@@ -14,6 +14,7 @@ export const createEngine = () => {
     ring: null, ringAt: 0, ringFull: false,
     rec: null, chunks: [], recAt: 0, capturing: false, pcm: [], pcmN: 0, pcmCapped: false,
     take: null, clip: null,
+    voice: null, voiceOn: false, voiceFailed: false, voiceGen: 0,
     buf: null, work: null, taps: null, freq: null, dec: 1
   };
 
@@ -101,6 +102,7 @@ export const createEngine = () => {
     });
     await st.ensureContext();
     st.stopPlayback();
+    st.voiceHalt();
     st.mic = st.ctx.createMediaStreamSource(st.stream);
     st.mic.connect(st.analyser);
     // The rewind buffer starts empty and starts filling here. It runs whatever
@@ -200,6 +202,20 @@ export const createEngine = () => {
     // decodeAudioData takes the buffer over and detaches it, so it gets a copy
     // and the clip stays playable a second time.
     const audio = await st.ctx.decodeAudioData(st.clip.buf.slice(0));
+    return startSource(audio, onEnded);
+  };
+
+  // Samples already in hand, played the same way without being a clip. The
+  // test vowel uses it where the live voice cannot run.
+  st.playSamples = async (samples, onEnded) => {
+    await st.ensureContext();
+    const audio = st.ctx.createBuffer(1, samples.length, st.ctx.sampleRate);
+    audio.copyToChannel(samples, 0);
+    return startSource(audio, onEnded);
+  };
+
+  const startSource = (audio, onEnded) => {
+    st.voiceHalt();
     // The microphone comes off the analyser first, or the room would be mixed
     // into the take and measured with it.
     if (st.mic) { try { st.mic.disconnect(); } catch (e) {} }
@@ -224,6 +240,63 @@ export const createEngine = () => {
   };
 
   st.playing = () => !!st.play;
+
+  // --- the test voice -----------------------------------------------------
+  // A synthesiser on the audio thread, worklet/voice.js, fed where the pointer
+  // is on the vowel plane. Like a take played back it goes to the analyser and
+  // the speakers, with the microphone off the analyser while it sounds.
+  const openVoice = async () => {
+    if (st.voice || st.voiceFailed) return st.voice;
+    try {
+      if (!st.ctx.audioWorklet) throw new Error("no AudioWorklet");
+      await st.ctx.audioWorklet.addModule("worklet/voice.js");
+      st.voice = new AudioWorkletNode(st.ctx, "voice", { numberOfInputs: 0, outputChannelCount: [1] });
+    } catch (e) {
+      st.voiceFailed = true;
+      st.voice = null;
+    }
+    return st.voice;
+  };
+
+  // Resolves true once sounding, or false where this browser cannot run it.
+  st.voiceStart = async params => {
+    await st.ensureContext();
+    if (st.ctx.state === "suspended") { try { await st.ctx.resume(); } catch (e) {} }
+    if (!(await openVoice())) return false;
+    st.voiceGen++;
+    st.stopPlayback();
+    if (st.mic) { try { st.mic.disconnect(); } catch (e) {} }
+    if (!st.voiceOn) {
+      st.voice.connect(st.analyser);
+      st.voice.connect(st.ctx.destination);
+      st.voiceOn = true;
+    }
+    st.voice.port.postMessage({ ...params, gate: true });
+    return true;
+  };
+
+  st.voiceSet = params => { if (st.voiceOn) st.voice.port.postMessage(params); };
+
+  // Closed with its release, then taken off the analyser. A start that comes
+  // in during the release keeps the voice connected: the generation count
+  // tells this stop it is no longer the latest word.
+  st.voiceStop = () => new Promise(resolve => {
+    if (!st.voiceOn) return resolve();
+    st.voice.port.postMessage({ gate: false });
+    const gen = st.voiceGen;
+    setTimeout(() => { if (gen === st.voiceGen) st.voiceHalt(); resolve(); }, 60);
+  });
+
+  // At once, for when something else needs the analyser now.
+  st.voiceHalt = () => {
+    if (!st.voiceOn) return;
+    st.voice.port.postMessage({ gate: false });
+    try { st.voice.disconnect(); } catch (e) {}
+    st.voiceOn = false;
+    if (st.mic && !st.play) { try { st.mic.connect(st.analyser); } catch (e) {} }
+  };
+
+  st.voicing = () => st.voiceOn;
 
   // --- downloads ----------------------------------------------------------
   // The extension follows what was actually produced, never what was asked
@@ -260,6 +333,7 @@ export const createEngine = () => {
   // the recording indicator stays lit with nothing on screen to say why.
   st.teardown = () => {
     st.stopPlayback();
+    st.voiceHalt();
     try { if (st.rec && st.rec.state !== "inactive") st.rec.stop(); } catch (e) {}
     st.stopMic();
     try {
