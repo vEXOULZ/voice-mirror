@@ -37,6 +37,8 @@ export const defaults = () => ({
   // The meter for voiced time inside no band. Off until asked for: with the
   // shipped bands covering the whole range it would only ever read 0%.
   showOutside: false,
+  // The pitch the test vowel is made at.
+  tonePitch: 180,
   reference: null
 });
 
@@ -50,6 +52,8 @@ export const normalise = raw => {
   if (["system", "light", "dark"].includes(raw.theme)) out.theme = raw.theme;
   if (["en", "pt"].includes(raw.lang)) out.lang = raw.lang;
   if (typeof raw.showOutside === "boolean") out.showOutside = raw.showOutside;
+  const tp = Number(raw.tonePitch);
+  if (raw.tonePitch != null && isFinite(tp) && tp >= 60 && tp <= 500) out.tonePitch = Math.round(tp);
 
   if (raw.panels && typeof raw.panels === "object") {
     for (const [k] of PANELS) if (k in raw.panels) out.panels[k] = !!raw.panels[k];

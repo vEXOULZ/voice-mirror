@@ -165,19 +165,35 @@ export const drawFormants = (cv, { frames, cursor }) => {
   });
 };
 
-export const drawPlane = (cv, { rows, target, trail, smooth, steady }) => {
+// Room on the left and bottom for axis titles as well as tick numbers.
+const PL = 50, PB = 36, PT = 6, PR = 8;
+
+// Both axes run high to low, the phonetic convention, because it makes the
+// plane a picture of the mouth: up is a higher tongue, left is a fronter one.
+const planeScale = (w, h) => ({
+  X: f2 => PL + (1 - (f2 - PLANE_F2[0]) / (PLANE_F2[1] - PLANE_F2[0])) * (w - PL - PR),
+  Y: f1 => PT + (f1 - PLANE_F1[0]) / (PLANE_F1[1] - PLANE_F1[0]) * (h - PT - PB)
+});
+
+// The reverse, for a click: CSS pixels inside the canvas to [F1, F2], or null
+// outside the plotted square. Worked from the same numbers the drawing uses,
+// so the sound made is the one under the pointer.
+export const planeAt = (cv, x, y) => {
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (x < PL || x > w - PR || y < PT || y > h - PB) return null;
+  const f2 = PLANE_F2[0] + (1 - (x - PL) / (w - PL - PR)) * (PLANE_F2[1] - PLANE_F2[0]);
+  const f1 = PLANE_F1[0] + (y - PT) / (h - PT - PB) * (PLANE_F1[1] - PLANE_F1[0]);
+  return [f1, f2];
+};
+
+export const drawPlane = (cv, { rows, target, trail, smooth, steady, probe }) => {
   const g = cv.getContext("2d");
   const [w, h] = fit(cv, g);
   if (!w || !h) return;
   g.clearRect(0, 0, w, h);
   const T = tokens();
-  // Room on the left and bottom for axis titles as well as tick numbers.
-  const L = 50, B = 36, TOP = 6, R = 8;
-
-  // Both axes run high to low, the phonetic convention, because it makes the
-  // plane a picture of the mouth: up is a higher tongue, left is a fronter one.
-  const X = f2 => L + (1 - (f2 - PLANE_F2[0]) / (PLANE_F2[1] - PLANE_F2[0])) * (w - L - R);
-  const Y = f1 => TOP + (f1 - PLANE_F1[0]) / (PLANE_F1[1] - PLANE_F1[0]) * (h - TOP - B);
+  const L = PL, B = PB, TOP = PT, R = PR;
+  const { X, Y } = planeScale(w, h);
 
   g.font = "10px system-ui, sans-serif";
   g.textBaseline = "middle";
@@ -245,6 +261,20 @@ export const drawPlane = (cv, { rows, target, trail, smooth, steady }) => {
       }
       g.globalAlpha = 1;
     }
+  }
+
+  // Where the last test vowel was asked for: a crosshair, in the accent colour
+  // rather than the voice's green, so the dot the analysis draws can be seen
+  // landing on it or missing.
+  if (probe) {
+    const x = X(probe[1]), y = Y(probe[0]);
+    g.strokeStyle = T.accent; g.lineWidth = 1.5; g.globalAlpha = 0.9;
+    g.beginPath(); g.arc(x, y, 9, 0, 2 * Math.PI); g.stroke();
+    g.beginPath();
+    g.moveTo(x - 14, y); g.lineTo(x - 4, y); g.moveTo(x + 4, y); g.lineTo(x + 14, y);
+    g.moveTo(x, y - 14); g.lineTo(x, y - 4); g.moveTo(x, y + 4); g.lineTo(x, y + 14);
+    g.stroke();
+    g.globalAlpha = 1;
   }
 
   // The path, not a scatter: the eye follows a line where it cannot follow a

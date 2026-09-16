@@ -1,13 +1,16 @@
 // Wiring and the frame loop.
 
 import {
-  FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX, F0_CEILING
+  FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX, F0_CEILING,
+  F0_FLOOR, TONE_SECONDS
 } from "./constants.js";
 import {
   decimate, detectPitch, formants, centroid, vtl, median, createVowelTracker
 } from "./dsp.js";
 import { loadShipped, parseReference, inBand, langsOf } from "./reference.js";
-import { drawTrace, drawFormants, drawPlane } from "./draw.js";
+import { drawTrace, drawFormants, drawPlane, planeAt } from "./draw.js";
+import { synthVowel, upperFormants } from "./synth.js";
+import { encodeWav } from "./wav.js";
 import { createEngine } from "./audio.js";
 import { createUI } from "./ui.js";
 import * as store from "./settings.js";
@@ -61,6 +64,8 @@ const s = {
   counts: [], outside: 0
 };
 let frame = 0, last = 0, raf = 0, lastFormant = null, lastHz = null;
+// The last place a test vowel was asked for, as [F1, F2].
+let probe = null;
 
 const resetSession = () => {
   ui.blank();
@@ -105,7 +110,8 @@ const paint = () => {
   if (ui.panelShown("plane")) {
     drawPlane(el.plane, {
       rows: rowsForLang(), target: ui.targetOf(ref),
-      trail: tracker.trail, smooth: tracker.smooth, steady: tracker.steady
+      trail: tracker.trail, smooth: tracker.smooth, steady: tracker.steady,
+      probe: el.toneOn.checked ? probe : null
     });
   }
 };
@@ -191,7 +197,7 @@ el.bandAdd.onclick = () => {
   const top = cur.length ? Math.max(...cur.map(b => b.high)) : 100;
   settings.bands = cur.map(b => ({ ...b })).concat([{
     name: "", low: Math.min(560, top + 10), high: Math.min(600, top + 60),
-    color: store.hexToBand("#969696"), shade: true, shade: true
+    color: store.hexToBand("#969696"), shade: true
   }]);
   persist();
   ui.renderBands(bands(), true);
@@ -290,6 +296,7 @@ const saveFile = (text, name) => {
 // so the page never shows half of one set and half of another.
 const applyAll = () => {
   ui.applyTheme(settings.theme);
+  el.tonePitch.value = settings.tonePitch;
   for (const r of el.lang.querySelectorAll("input")) r.checked = r.value === setLang(settings.lang);
   ui.relabel();
   labelButtons();
@@ -494,16 +501,9 @@ el.keep.onclick = async () => {
   say("status.kept", { secs: take.seconds.toFixed(0) });
 };
 
-el.play.onclick = async () => {
-  if (engine.playing()) {
-    engine.stopPlayback();
-    labelButtons();
-    if (!engine.listening()) stopLoop();
-    settle();
-    say("status.playStopped");
-    return;
-  }
-  if (!engine.clip) return;
+// Plays whatever clip is loaded through the analysis. Returns the length in
+// seconds, or null if it could not be decoded, which it has already said.
+const playLoaded = async () => {
   let secs;
   try {
     resetSession();
@@ -515,11 +515,78 @@ el.play.onclick = async () => {
     });
   } catch (e) {
     say("status.decodeFailed", { name: engine.clip.name, error: String(e) }, true);
-    return;
+    return null;
   }
   labelButtons();
-  say("status.playing", { name: engine.clip.name, secs: secs.toFixed(1) });
   runLoop();
+  return secs;
+};
+
+el.play.onclick = async () => {
+  if (engine.playing()) {
+    engine.stopPlayback();
+    labelButtons();
+    if (!engine.listening()) stopLoop();
+    settle();
+    say("status.playStopped");
+    return;
+  }
+  if (!engine.clip) return;
+  const secs = await playLoaded();
+  if (secs != null) say("status.playing", { name: engine.clip.name, secs: secs.toFixed(1) });
+};
+
+// --- the test vowel --------------------------------------------------------
+// A click on the plane makes a vowel with its F1 and F2 at that spot, at the
+// pitch set beside it, and plays it through the same analysis as a recording.
+// It becomes the loaded clip, so Play back repeats it and Download is not
+// involved: it is a test signal, not a take.
+const tonePitch = () => {
+  const v = Math.round(Number(el.tonePitch.value));
+  return isFinite(v) ? Math.min(F0_CEILING, Math.max(F0_FLOOR, v)) : settings.tonePitch;
+};
+
+const playTone = async at => {
+  probe = at;
+  const [f1, f2] = at.map(Math.round);
+  const f0 = tonePitch();
+  const rate = engine.ctx ? engine.ctx.sampleRate : 48000;
+  const wav = encodeWav(synthVowel({ f0, f1, f2, seconds: TONE_SECONDS, rate }), rate);
+  const vars = { f0, f1, f2, f3: upperFormants(f2)[0] };
+  if (engine.playing()) engine.stopPlayback();
+  engine.loadClip(t("clip.tone", vars), wav);
+  ui.showClip(engine.clip.name);
+  el.play.disabled = false;
+  el.toneAgain.disabled = false;
+  if (await playLoaded() != null) say("status.tone", vars);
+  repaint();
+};
+
+const armTone = () => {
+  el.plane.classList.toggle("armed", el.toneOn.checked);
+  el.toneBar.hidden = !el.toneOn.checked;
+  el.toneAgain.disabled = !el.toneOn.checked || !probe;
+  repaint();
+};
+el.toneOn.onchange = armTone;
+// Off on every visit. It is not a setting, and a browser that restores form
+// state on reload would otherwise bring it back ticked with its row hidden.
+el.toneOn.checked = false;
+armTone();
+
+el.plane.addEventListener("click", e => {
+  if (!el.toneOn.checked) return;
+  const r = el.plane.getBoundingClientRect();
+  const at = planeAt(el.plane, e.clientX - r.left, e.clientY - r.top);
+  if (at) playTone(at);
+});
+
+el.toneAgain.onclick = () => { if (probe) playTone(probe); };
+
+el.tonePitch.onchange = () => {
+  el.tonePitch.value = tonePitch();
+  settings.tonePitch = tonePitch();
+  persist();
 };
 
 el.cal.onclick = () => {

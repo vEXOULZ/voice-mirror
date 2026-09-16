@@ -47,6 +47,7 @@ export default {
   "clip.loaded": "loaded {name}",
   "clip.justRecorded": "the take just recorded",
   "clip.lastSeconds": "the last {secs} seconds",
+  "clip.tone": "a test vowel, F1 {f1} F2 {f2} Hz at {f0} Hz",
 
   // reference
   "ref.none": "None",
@@ -110,6 +111,7 @@ export default {
   "status.playDone": "Playback finished.",
   "status.decodeFailed": "Could not decode {name}: {error}",
   "status.playing": "Playing {name} through the same analysis, {secs}s",
+  "status.tone": "Test vowel: F1 {f1}, F2 {f2}, F3 {f3} Hz, pitch {f0} Hz.",
   "status.cleared": "Measurements cleared.",
   "status.clearedListening": "Measurements cleared. Still listening.",
   "status.downloaded": "Downloaded {name}",

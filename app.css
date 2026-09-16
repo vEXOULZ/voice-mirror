@@ -222,6 +222,13 @@ select { max-width: 100%; }
 canvas { width: 100%; display: block; }
 #trace { height: 190px; }
 #plane { height: 280px; }
+#plane.armed { cursor: crosshair; }
+.sub-bar .check { margin: 0; }
+.tone-bar { margin-top: -2px; }
+.tone-bar input[type="number"] {
+  width: 5em; font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 5px 8px;
+}
 #formants { height: 150px; margin-top: 4px; }
 
 /* One meter per band. A grid rather than a stacked bar, because overlapping

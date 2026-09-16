@@ -16,6 +16,7 @@ import { encodeWav, floatToInt16, int16ToFloat } from "../js/wav.js";
 import { RMS_GATE, WORK_RATE, F0_FLOOR, F0_CEILING } from "../js/constants.js";
 import { normalise, defaults, fromFile, toFile, hexToBand, bandToHex, PANELS } from "../js/settings.js";
 import { parseReference, inBand } from "../js/reference.js";
+import { synthVowel } from "../js/synth.js";
 
 const RATE = WORK_RATE;   // the working rate everything downstream sees
 const LEN = 1024;         // one analysis window, 4096 decimated by four
@@ -170,6 +171,32 @@ test("F2 is the next resonance up, not the narrowest pole up", () => {
   const f = formants(vowel(120, [500, 1558, 2600, 3500, 4400], RATE, LEN, [90, 130, 40, 150, 200]), RATE, null);
   assert.ok(f, "returned nothing");
   assert.ok(Math.abs(f[1] - 1558) < 150, "F2 came back as " + f[1].toFixed(0));
+});
+
+test("a test vowel is heard back where it was asked for", () => {
+  // The whole path a click takes: synthesised at a playback rate, decimated
+  // the way the analyser's frames are, then tracked. If this drifts, the dot
+  // stops landing on the crosshair.
+  const rate = 48000, dec = Math.round(rate / WORK_RATE), taps = makeTaps(rate);
+  for (const [f0, f1, f2] of [[120, 300, 2200], [200, 700, 1300], [180, 350, 850], [250, 500, 1800]]) {
+    const x = synthVowel({ f0, f1, f2, rate });
+    const w = decimate(x.subarray(rate / 2, rate / 2 + 4096), dec, taps, new Float32Array(Math.floor(4096 / dec)));
+    const hz = detectPitch(w, rate / dec, RMS_GATE);
+    const f = formants(w, rate / dec, null);
+    const at = f0 + "/" + f1 + "/" + f2;
+    assert.ok(hz && Math.abs(hz - f0) < 2, at + " pitch came back as " + hz);
+    assert.ok(f && Math.abs(f[0] - f1) < 60, at + " F1 came back as " + (f && f[0]));
+    assert.ok(f && Math.abs(f[1] - f2) < 120, at + " F2 came back as " + (f && f[1]));
+  }
+});
+
+test("a test vowel fades in and out and stays under full scale", () => {
+  const x = synthVowel({ f0: 180, f1: 500, f2: 1500, seconds: 0.5, rate: 48000 });
+  assert.equal(x.length, 24000);
+  assert.equal(x[0], 0);
+  let peak = 0;
+  for (const v of x) peak = Math.max(peak, Math.abs(v));
+  assert.ok(peak <= 0.5 + 1e-6 && peak > 0.4, "peak " + peak);
 });
 
 test("silence yields no formants", () => {

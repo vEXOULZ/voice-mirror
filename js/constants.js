@@ -129,6 +129,10 @@ export const TRACK_TONE = [["F1", "#6A9FB5"], ["F2", "#B85450"], ["F3", "#82B366
 
 // The vowel plane, on the axes the phonetic convention uses.
 export const PLANE_F2 = [200, 4000], PLANE_F1 = [200, 1250];
+
+// The test vowel: how long one click sounds, and the pitch range it accepts,
+// which is the range the pitch tracker can report.
+export const TONE_SECONDS = 1.5, TONE_PITCH = 180;
 export const REF_TONE = { m: "rgb(74,144,194)", w: "rgb(232,111,166)" };
 export const REF_NAME = { m: "men", w: "women" };
 

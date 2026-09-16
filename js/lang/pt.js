@@ -113,8 +113,17 @@ export default {
     A fala corrida fica dentro deles mesmo quando nada na voz é diferente, então leia a posição e a
     dispersão, não a distância até um losango.</p>
     <p>Escolha um Alvo para ver a que distância você está dos dois pontos de referência daquela vogal, e
-    para que lado se mover. Nenhum dos dois é uma meta escolhida pela página.</p>`,
+    para que lado se mover. Nenhum dos dois é uma meta escolhida pela página.</p>
+    <p><b>Vogal de teste</b>: marque a opção e clique em qualquer lugar do plano para ouvir uma vogal
+    sintética com F1 e F2 naquele ponto, no tom indicado ao lado. F3 e acima são posicionados
+    automaticamente. Ela passa pela mesma análise de uma gravação, então o ponto deve cair na mira, o
+    que serve para conferir a página e para ouvir como soa uma posição. Onde F2 fica abaixo de F1 ou
+    muito perto dele não existe vogal real, e o ponto pode não acompanhar.</p>`,
   "h.reference": "Referência",
+  "h.toneOn": "Vogal de teste",
+  "h.toneHint": "Clique no plano para ouvir.",
+  "h.tonePitch": "Tom",
+  "h.toneAgain": "Tocar de novo",
   "h.target": "Alvo",
   "h.planeLabel": "Plano vocálico: a sua última vogal sustentada contra as vogais de referência. As distâncias até o alvo escolhido aparecem em texto abaixo.",
   "h.say": "Diga",
@@ -174,6 +183,7 @@ export default {
   "clip.loaded": "carregado: {name}",
   "clip.justRecorded": "a gravação que acabou de ser feita",
   "clip.lastSeconds": "os últimos {secs} segundos",
+  "clip.tone": "uma vogal de teste, F1 {f1} F2 {f2} Hz a {f0} Hz",
 
   "ref.none": "Nenhum",
   "ref.using": "usando {name}",
@@ -233,6 +243,7 @@ export default {
   "status.playDone": "Reprodução terminada.",
   "status.decodeFailed": "Não foi possível decodificar {name}: {error}",
   "status.playing": "Reproduzindo {name} pela mesma análise, {secs}s",
+  "status.tone": "Vogal de teste: F1 {f1}, F2 {f2}, F3 {f3} Hz, tom {f0} Hz.",
   "status.cleared": "Medições zeradas.",
   "status.clearedListening": "Medições zeradas. Ainda ouvindo.",
   "status.downloaded": "Baixado: {name}",

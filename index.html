@@ -301,10 +301,23 @@
         and spread, not distance to a diamond.</p>
       <p>Pick a Target to see how far you are from both reference points for that vowel, and which
         way to move. Neither point is a goal the page chooses for you.</p>
+      <p><b>Test vowel</b>: tick it, then click anywhere on the plane to hear a synthetic vowel with
+        its F1 and F2 at that spot, at the pitch beside it. F3 and above are placed for you. It plays
+        through the same analysis as a recording, so the dot should land on the crosshair, which is a
+        way to check the page, and to hear what a position sounds like. Where F2 sits below F1 or
+        very near it, no real vowel lives, and the dot may not follow.</p>
     </div>
     <div class="bar sub-bar">
       <label><span data-i18n="h.reference">Reference</span> <select id="refLang"></select></label>
       <label><span data-i18n="h.target">Target</span> <select id="target"><option value="">None</option></select></label>
+      <label class="check"><input type="checkbox" id="toneOn" aria-controls="toneBar" autocomplete="off">
+        <span data-i18n="h.toneOn">Test vowel</span></label>
+    </div>
+    <div id="toneBar" class="bar sub-bar tone-bar" hidden>
+      <span class="dim" data-i18n="h.toneHint">Click the plane to hear it.</span>
+      <label><span data-i18n="h.tonePitch">Pitch</span>
+        <input type="number" id="tonePitch" min="60" max="500" step="1" value="180"> Hz</label>
+      <button id="toneAgain" class="ghost" disabled data-i18n="h.toneAgain">Play again</button>
     </div>
     <canvas id="plane" height="260" role="img" data-i18n-attr="aria-label:h.planeLabel"
             aria-label="Vowel plane: your last held vowel against the reference vowels. Distances to a chosen target are given in text below."></canvas>
