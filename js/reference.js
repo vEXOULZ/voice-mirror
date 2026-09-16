@@ -5,6 +5,8 @@
 // is fetched from this site; a file you pick is read in the browser and
 // forgotten when the tab closes.
 
+import { t } from "./i18n.js";
+
 export const REFERENCE_URL = "data/reference.json";
 
 // A row has to carry both reference sets or it cannot be drawn. A row that
@@ -46,14 +48,14 @@ export const parseReference = raw => {
   try {
     data = typeof raw === "string" ? JSON.parse(raw) : raw;
   } catch (e) {
-    throw new Error("that file is not JSON: " + e.message);
+    throw new Error(t("err.notJson", { error: e.message }));
   }
-  if (!data || typeof data !== "object") throw new Error("that file is not a JSON object.");
+  if (!data || typeof data !== "object") throw new Error(t("err.notObject"));
 
   const bands = cleanBands(data.pitch_bands);
   const { rows, bad } = cleanVowels(data.vowel_reference);
   if (!bands.length && !rows.length) {
-    throw new Error("no usable pitch_bands and no usable vowel_reference in that file.");
+    throw new Error(t("err.nothingUsable"));
   }
 
   return {
@@ -69,7 +71,7 @@ export const parseReference = raw => {
 
 export const loadShipped = async () => {
   const res = await fetch(REFERENCE_URL, { cache: "no-cache" });
-  if (!res.ok) throw new Error(REFERENCE_URL + " came back " + res.status);
+  if (!res.ok) throw new Error(t("err.status", { url: REFERENCE_URL, code: res.status }));
   return parseReference(await res.text());
 };
 

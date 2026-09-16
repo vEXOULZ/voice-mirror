@@ -11,6 +11,7 @@ import { drawTrace, drawFormants, drawPlane } from "./draw.js";
 import { createEngine } from "./audio.js";
 import { createUI } from "./ui.js";
 import * as store from "./settings.js";
+import { t, setLang, wireSwitch } from "./i18n.js";
 
 const ui = createUI();
 const el = ui.el;
@@ -23,6 +24,21 @@ let ref = EMPTY_REF;
 let settings = store.load();
 let edges = [];
 let rmsGate = RMS_GATE;
+
+// Every status line goes through here, so it can be said again in the other
+// language if you switch while it is on screen.
+const say = (key, vars, bad) => ui.status(() => t(key, vars), bad);
+
+// The three buttons whose words follow what is happening. Worked out from the
+// engine every time rather than set at each place that changes it, so they
+// cannot fall out of step with it or with the language.
+const labelButtons = () => {
+  el.start.textContent = t(engine.listening() ? "btn.stop" : "btn.start");
+  el.start.classList.toggle("live", engine.listening());
+  el.rec.textContent = t(engine.rec ? "btn.stopRecording" : "btn.record");
+  el.rec.classList.toggle("live", !!engine.rec);
+  el.play.textContent = t(engine.playing() ? "btn.stopPlayback" : "btn.playBack");
+};
 
 // Your bands win over the reference file's. Kept apart rather than copied in,
 // so "back to the shipped bands" is a matter of forgetting yours.
@@ -112,7 +128,7 @@ window.addEventListener("resize", paint);
 // --- settings ------------------------------------------------------------
 const persist = () => {
   if (!store.save(settings)) {
-    ui.status("This browser would not save settings, so they last until the tab closes.", true);
+    say("status.noSave", null, true);
   }
 };
 
@@ -122,6 +138,22 @@ ui.onPanel = (key, on) => {
   ui.applyPanels(settings.panels);
   repaint();
 };
+
+// A new language redoes every word on the page, and the canvases, which draw
+// their own labels.
+const applyLanguage = () => {
+  setLang(settings.lang);
+  ui.relabel();
+  ui.renderBands(bands(), !!settings.bands);
+  labelButtons();
+  settle();
+};
+
+wireSwitch(el.lang, lang => {
+  settings.lang = lang;
+  persist();
+  applyLanguage();
+});
 
 el.theme.onchange = e => {
   settings.theme = e.target.value;
@@ -175,7 +207,7 @@ el.bandReset.onclick = () => {
   ui.showSources(ref, false);
   recount();
   paint();
-  ui.status("Pitch bands back to the shipped ones.");
+  say("status.bandsReset");
 };
 
 // --- reference -----------------------------------------------------------
@@ -208,11 +240,13 @@ const useReferenceFile = async f => {
     settings.reference = JSON.parse(text);
     persist();
     useReference(next, true);
-    ui.status("Reference loaded from " + f.name +
-      (next.dropped.length ? ". Dropped " + next.dropped.length + " unusable row(s): "
-        + next.dropped.join(", ") : "") + ". Saved in this browser, not uploaded.");
+    const dropped = next.dropped;
+    ui.status(() => t("status.refLoaded", {
+      name: f.name,
+      dropped: dropped.length ? t("status.refDropped", { n: dropped.length, rows: dropped.join(", ") }) : ""
+    }));
   } catch (e) {
-    ui.status("Could not use " + f.name + ": " + e.message + " Keeping what was loaded.", true);
+    say("status.refFailed", { name: f.name, error: e.message }, true);
   }
 };
 
@@ -227,7 +261,7 @@ el.refReset.onclick = () => {
   settings.reference = null;
   persist();
   useReference(shipped, false);
-  ui.status("Back to the shipped reference.");
+  say("status.refReset");
 };
 
 el.refLang.onchange = () => { ui.fillTargets(ref); ui.showSources(ref, !!settings.bands); repaint(); };
@@ -250,11 +284,14 @@ const saveFile = (text, name) => {
 // so the page never shows half of one set and half of another.
 const applyAll = () => {
   ui.applyTheme(settings.theme);
+  for (const r of el.lang.querySelectorAll("input")) r.checked = r.value === setLang(settings.lang);
+  ui.relabel();
+  labelButtons();
   let next = shipped, custom = false;
   if (settings.reference) {
     try { next = withShipped(parseReference(settings.reference)); custom = true; }
     catch (e) {
-      ui.status("The saved reference could not be used: " + e.message + " Using the shipped one.", true);
+      say("status.savedRefFailed", { error: e.message }, true);
       settings.reference = null;
     }
   }
@@ -263,7 +300,7 @@ const applyAll = () => {
 
 el.setExport.onclick = () => {
   saveFile(store.toFile(settings), "voice-mirror-settings.json");
-  ui.status("Settings exported. Nothing about your voice is in that file.");
+  say("status.exported");
 };
 
 el.setImport.onclick = () => el.setImportFile.click();
@@ -275,18 +312,18 @@ el.setImportFile.onchange = async () => {
     settings = store.fromFile(await f.text());
     persist();
     applyAll();
-    ui.status("Settings imported from " + f.name + ".");
+    say("status.imported", { name: f.name });
   } catch (e) {
-    ui.status("Could not import " + f.name + ": " + e.message, true);
+    say("status.importFailed", { name: f.name, error: e.message }, true);
   }
 };
 
 el.setReset.onclick = () => {
-  if (!window.confirm("Forget your theme, panels, pitch bands and reference, in this browser?")) return;
+  if (!window.confirm(t("status.resetConfirm"))) return;
   store.clear();
   settings = store.defaults();
   applyAll();
-  ui.status("Settings reset. Export first next time if you want them back.");
+  say("status.resetDone");
 };
 
 // --- calibration ---------------------------------------------------------
@@ -299,13 +336,16 @@ const calRms = [];
 const finishCalibration = () => {
   calUntil = 0;
   el.cal.disabled = !engine.listening();
-  if (calRms.length < 10) { ui.status("Calibration heard nothing. Gate unchanged."); return; }
+  if (calRms.length < 10) { say("status.calNothing"); return; }
   const sorted = calRms.slice().sort((a, b) => a - b);
   const p95 = sorted[Math.floor(0.95 * (sorted.length - 1))];
   const want = p95 * CAL_OVER;
   rmsGate = Math.min(CAL_MAX, Math.max(CAL_MIN, want));
-  ui.status("Room measured at " + p95.toFixed(5) + ". Gate set to " + rmsGate.toFixed(5) +
-    (want !== rmsGate ? " (clamped)" : "") + ". Default is " + RMS_GATE + ".");
+  const gate = rmsGate;
+  ui.status(() => t("status.calDone", {
+    room: p95.toFixed(5), gate: gate.toFixed(5), def: RMS_GATE,
+    clamped: want !== gate ? t("status.calClamped") : ""
+  }));
 };
 
 // --- the loop ------------------------------------------------------------
@@ -368,7 +408,7 @@ const tick = ts => {
     ui.advise(ui.targetOf(ref), tracker);
     const secs = engine.recordingFor();
     if (secs != null) {
-      ui.status("Recording " + Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0"));
+      say("status.recording", { time: Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0") });
     }
   }
 };
@@ -382,10 +422,7 @@ el.start.onclick = async () => {
     // Only the microphone stops. A take already recorded stays downloadable,
     // and the loop keeps running if something is being played.
     engine.stopMic();
-    el.start.textContent = "Start";
-    el.start.classList.remove("live");
-    el.rec.textContent = "Record";
-    el.rec.classList.remove("live");
+    labelButtons();
     el.rec.disabled = true;
     el.cal.disabled = true;
     calUntil = 0;
@@ -394,72 +431,71 @@ el.start.onclick = async () => {
     // said, and realising it was worth keeping a second too late is the whole
     // case for the button.
     settle();
-    ui.status(engine.clip ? "Microphone stopped. " + engine.clip.name + " is still loaded."
-                          : "Microphone stopped.");
+    if (engine.clip) say("status.micStoppedClip", { name: engine.clip.name });
+    else say("status.micStopped");
     return;
   }
   try {
     await engine.startMic();
   } catch (e) {
-    ui.status("Microphone refused: " + (e && e.name ? e.name : String(e)), true);
+    say("status.micRefused", { error: e && e.name ? e.name : String(e) }, true);
     return;
   }
   resetSession();
-  el.start.textContent = "Stop";
-  el.start.classList.add("live");
+  labelButtons();
   el.keep.disabled = !engine.hasTap();
   el.rec.disabled = !engine.canRecord();
   el.cal.disabled = false;
   // A tooltip does not exist on a touch screen, so a missing capability is
   // said where it will be read.
   const missing = [];
-  if (!engine.canRecord()) missing.push("this browser cannot record, so Record is off");
-  if (!engine.hasTap()) missing.push("this browser gives no rewind buffer, so Keep last 30s is off");
-  ui.status("Listening at " + Math.round(engine.workRate()) + " Hz" +
-    (missing.length ? ". Note: " + missing.join("; ") + "." : ""));
+  if (!engine.canRecord()) missing.push("status.noRecord");
+  if (!engine.hasTap()) missing.push("status.noTap");
+  const rate = Math.round(engine.workRate());
+  ui.status(() => missing.length
+    ? t("status.listeningNote", { rate, notes: missing.map(k => t(k)).join("; ") })
+    : t("status.listening", { rate }));
   runLoop();
 };
 
 el.rec.onclick = async () => {
   if (engine.rec) {
     const take = await engine.stopRecording();
-    el.rec.textContent = "Record";
-    el.rec.classList.remove("live");
+    labelButtons();
     ui.showTake(take);
-    ui.status(take ? "Take ready. Download it, or record over it." : "That recording produced nothing.");
+    say(take ? "status.takeReady" : "status.takeEmpty");
     if (take) {
       const blob = take.wav || take.compressed;
-      engine.loadClip("the take just recorded", await blob.arrayBuffer());
+      engine.loadClip(t("clip.justRecorded"), await blob.arrayBuffer());
       ui.showClip(engine.clip.name);
       el.play.disabled = false;
     }
     return;
   }
   engine.startRecording();
-  el.rec.textContent = "Stop recording";
-  el.rec.classList.add("live");
+  labelButtons();
 };
 
 el.keep.onclick = async () => {
   const take = engine.keepLast();
-  if (!take) { ui.status("Nothing heard yet."); return; }
+  if (!take) { say("status.nothingHeard"); return; }
   ui.showTake(take);
   // It becomes the loaded clip, so Play back runs it through the same analysis
   // a recorded take gets. The ring is left alone: pressing it twice keeps two
   // overlapping windows of the same thirty seconds, not two halves of it.
-  engine.loadClip("the last " + take.seconds.toFixed(0) + " seconds", await take.wav.arrayBuffer());
+  engine.loadClip(t("clip.lastSeconds", { secs: take.seconds.toFixed(0) }), await take.wav.arrayBuffer());
   ui.showClip(engine.clip.name);
   el.play.disabled = false;
-  ui.status("Kept the last " + take.seconds.toFixed(0) + " seconds as lossless WAV.");
+  say("status.kept", { secs: take.seconds.toFixed(0) });
 };
 
 el.play.onclick = async () => {
   if (engine.playing()) {
     engine.stopPlayback();
-    el.play.textContent = "Play back";
+    labelButtons();
     if (!engine.listening()) stopLoop();
     settle();
-    ui.status("Playback stopped.");
+    say("status.playStopped");
     return;
   }
   if (!engine.clip) return;
@@ -467,22 +503,22 @@ el.play.onclick = async () => {
   try {
     resetSession();
     secs = await engine.playClip(() => {
-      el.play.textContent = "Play back";
+      labelButtons();
       if (!engine.listening()) stopLoop();
       settle();
-      ui.status("Playback finished.");
+      say("status.playDone");
     });
   } catch (e) {
-    ui.status("Could not decode " + engine.clip.name + ": " + String(e), true);
+    say("status.decodeFailed", { name: engine.clip.name, error: String(e) }, true);
     return;
   }
-  el.play.textContent = "Stop playback";
-  ui.status("Playing " + engine.clip.name + " through the same analysis, " + secs.toFixed(1) + "s");
+  labelButtons();
+  say("status.playing", { name: engine.clip.name, secs: secs.toFixed(1) });
   runLoop();
 };
 
 el.cal.onclick = () => {
-  if (calUntil) { calUntil = 0; el.cal.disabled = false; ui.status("Calibration cancelled."); return; }
+  if (calUntil) { calUntil = 0; el.cal.disabled = false; say("status.calCancelled"); return; }
   calRms.length = 0;
   calUntil = performance.now() + CAL_SECONDS * 1000;
   el.cal.disabled = true;
@@ -494,12 +530,13 @@ el.cal.onclick = () => {
 el.reset.onclick = () => {
   resetSession();
   repaint();
-  ui.status(engine.listening() ? "Measurements cleared. Still listening." : "Measurements cleared.");
+  say(engine.listening() ? "status.clearedListening" : "status.cleared");
 };
 
 el.download.onclick = () => {
   const name = engine.download(el.format.value);
-  ui.status(name ? "Downloaded " + name : "That take has no file in that format.", !name);
+  if (name) say("status.downloaded", { name });
+  else say("status.noFormat", null, true);
 };
 
 // --- files ---------------------------------------------------------------
@@ -508,9 +545,9 @@ const loadAudio = async f => {
     engine.loadClip(f.name, await f.arrayBuffer());
     ui.showClip(f.name);
     el.play.disabled = false;
-    ui.status("Loaded " + f.name + ". Press Play back.");
+    say("status.loaded", { name: f.name });
   } catch (e) {
-    ui.status("Could not read that file: " + String(e), true);
+    say("status.readFailed", { error: String(e) }, true);
   }
 };
 
@@ -540,13 +577,15 @@ window.addEventListener("pagehide", () => { stopLoop(); engine.teardown(); });
 // --- start up ------------------------------------------------------------
 if (!window.isSecureContext) el.insecure.hidden = false;
 ui.applyTheme(settings.theme);
+setLang(settings.lang);
+ui.relabel();
+labelButtons();
 
 try {
   shipped = await loadShipped();
   applyAll();
-  ui.status("Ready. Press Start and allow the microphone.");
+  say("status.ready");
 } catch (e) {
-  ui.status("Could not load the reference data: " + e.message +
-    " The page still runs; the bands and diamonds will be missing.", true);
+  say("status.shippedFailed", { error: e.message }, true);
   applyAll();
 }

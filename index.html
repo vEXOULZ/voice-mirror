@@ -3,117 +3,138 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Voice mirror</title>
-<meta name="description" content="A browser mirror for your voice: pitch, brightness and vowel, live, with nothing leaving the machine.">
+<title data-i18n="h.title">Voice mirror</title>
+<meta name="description" data-i18n-attr="content:h.description" content="A browser mirror for your voice: pitch, brightness and vowel, live, with nothing leaving the machine.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🎙</text></svg>">
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
 
+<!--
+  The English on this page is the English: js/i18n.js reads it back out of
+  the markup for any element marked data-i18n, and js/lang/pt.js holds the
+  Portuguese for the same keys.
+-->
+
 <header class="head">
-  <h1>Voice mirror</h1>
+  <h1 data-i18n="h.title">Voice mirror</h1>
   <div class="head-tools">
+    <div id="lang" class="theme-switch lang-switch" role="radiogroup" aria-label="Language"
+         data-i18n-attr="aria-label:h.language">
+      <label class="seg" title="English">
+        <input type="radio" name="lang" value="en" aria-label="English"><span lang="en">EN</span>
+      </label>
+      <label class="seg" title="Português">
+        <input type="radio" name="lang" value="pt" aria-label="Português"><span lang="pt-BR">PT</span>
+      </label>
+    </div>
+
     <!-- System is the default and sits in the middle: light and dark are the
          two overrides either side of it. -->
-    <div id="theme" class="theme-switch" role="radiogroup" aria-label="Theme">
-      <label class="seg" title="Light">
-        <input type="radio" name="theme" value="light" aria-label="Light theme">
+    <div id="theme" class="theme-switch" role="radiogroup" aria-label="Theme"
+         data-i18n-attr="aria-label:h.theme">
+      <label class="seg" title="Light" data-i18n-attr="title:h.light">
+        <input type="radio" name="theme" value="light" aria-label="Light theme"
+               data-i18n-attr="aria-label:h.lightTheme">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </label>
-      <label class="seg" title="Follow the system">
-        <input type="radio" name="theme" value="system" aria-label="Follow the system theme" checked>
+      <label class="seg" title="Follow the system" data-i18n-attr="title:h.system">
+        <input type="radio" name="theme" value="system" aria-label="Follow the system theme" checked
+               data-i18n-attr="aria-label:h.systemTheme">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
       </label>
-      <label class="seg" title="Dark">
-        <input type="radio" name="theme" value="dark" aria-label="Dark theme">
+      <label class="seg" title="Dark" data-i18n-attr="title:h.dark">
+        <input type="radio" name="theme" value="dark" aria-label="Dark theme"
+               data-i18n-attr="aria-label:h.darkTheme">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
       </label>
     </div>
 
     <details id="settings" class="settings">
-      <summary class="tool" aria-label="Settings" title="Settings">
+      <summary class="tool" aria-label="Settings" title="Settings"
+               data-i18n-attr="aria-label:h.settings,title:h.settings">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-        <span class="tool-label">Settings</span>
+        <span class="tool-label" data-i18n="h.settings">Settings</span>
       </summary>
       <div class="settings-panel">
-      <div class="settings-top">
-        <h2>Settings</h2>
-        <button type="button" id="setClose" class="ghost">Done</button>
-      </div>
+        <div class="settings-top">
+          <h2 data-i18n="h.settings">Settings</h2>
+          <button type="button" id="setClose" class="ghost" data-i18n="h.done">Done</button>
+        </div>
 
-      <section>
-        <h3>Show</h3>
-        <div id="panels" class="panel-bar"></div>
-      </section>
+        <section>
+          <h3 data-i18n="h.show">Show</h3>
+          <div id="panels" class="panel-bar"></div>
+        </section>
 
-      <section>
-        <div class="sec-head">
-          <h3>Pitch bands</h3>
-          <button type="button" class="info" aria-expanded="false" aria-controls="info-bands"
-                  aria-label="About pitch bands">i</button>
-        </div>
-        <div id="info-bands" class="info-text" hidden>
-          <p>The shaded ranges on the pitch trace, and the five zones the share bar counts: below the
-            lower band, the lower band, the gap between, the upper band, and above the upper.</p>
-          <p>They are a reference, not a target. Use your clinician's if they differ. Changes apply as
-            you type, and the whole session is recounted against the new bands.</p>
-        </div>
-        <div id="bands" class="bands"></div>
-        <div class="bar">
-          <button id="bandAdd" class="ghost">Add a band</button>
-          <button id="bandReset" class="ghost">Back to the shipped bands</button>
-        </div>
-      </section>
+        <section>
+          <div class="sec-head">
+            <h3 data-i18n="h.bands">Pitch bands</h3>
+            <button type="button" class="info" aria-expanded="false" aria-controls="info-bands"
+                    aria-label="About pitch bands" data-i18n-attr="aria-label:h.bandsAbout">i</button>
+          </div>
+          <div id="info-bands" class="info-text" hidden data-i18n="h.bandsInfo">
+            <p>The shaded ranges on the pitch trace, and the five zones the share bar counts: below the
+              lower band, the lower band, the gap between, the upper band, and above the upper.</p>
+            <p>They are a reference, not a target. Use your clinician's if they differ. Changes apply as
+              you type, and the whole session is recounted against the new bands.</p>
+          </div>
+          <div id="bands" class="bands"></div>
+          <div class="bar">
+            <button id="bandAdd" class="ghost" data-i18n="h.bandAdd">Add a band</button>
+            <button id="bandReset" class="ghost" data-i18n="h.bandReset">Back to the shipped bands</button>
+          </div>
+        </section>
 
-      <section>
-        <div class="sec-head">
-          <h3>Reference vowels</h3>
-          <button type="button" class="info" aria-expanded="false" aria-controls="info-ref"
-                  aria-label="About reference vowels">i</button>
-        </div>
-        <div id="info-ref" class="info-text" hidden>
-          <p>The diamonds on the vowel plane and the entries in Target. Load a JSON file to use your
-            own: your clinician's values, another language, or your own practice sentences.</p>
-          <p>It is read here and saved in this browser, never uploaded. The format is on
-            <a href="reference.html">the reference page</a>, beside the two shipped sets to read or
-            download as a starting point. You can also drop the file anywhere on this page.</p>
-        </div>
-        <div class="bar">
-          <input type="file" id="pickRef" accept="application/json,.json" hidden>
-          <button id="pickRefBtn" class="ghost">Load reference</button>
-          <button id="refReset" class="ghost" disabled>Back to the shipped reference</button>
-          <a class="ghost-link" href="reference.html">View the shipped references</a>
-          <span id="refName" class="dim"></span>
-        </div>
-      </section>
+        <section>
+          <div class="sec-head">
+            <h3 data-i18n="h.ref">Reference vowels</h3>
+            <button type="button" class="info" aria-expanded="false" aria-controls="info-ref"
+                    aria-label="About reference vowels" data-i18n-attr="aria-label:h.refAbout">i</button>
+          </div>
+          <div id="info-ref" class="info-text" hidden data-i18n="h.refInfo">
+            <p>The diamonds on the vowel plane and the entries in Target. Load a JSON file to use your
+              own: your clinician's values, another language, or your own practice sentences.</p>
+            <p>It is read here and saved in this browser, never uploaded. The format is on
+              <a href="reference.html">the reference page</a>, beside the two shipped sets to read or
+              download as a starting point. You can also drop the file anywhere on this page.</p>
+          </div>
+          <div class="bar">
+            <input type="file" id="pickRef" accept="application/json,.json" hidden>
+            <button id="pickRefBtn" class="ghost" data-i18n="h.refLoad">Load reference</button>
+            <button id="refReset" class="ghost" disabled data-i18n="h.refReset">Back to the shipped reference</button>
+            <a class="ghost-link" href="reference.html" data-i18n="h.refView">View the shipped references</a>
+            <span id="refName" class="dim"></span>
+          </div>
+        </section>
 
-      <section>
-        <div class="sec-head">
-          <h3>These settings</h3>
-          <button type="button" class="info" aria-expanded="false" aria-controls="info-settings"
-                  aria-label="Where settings are kept">i</button>
-        </div>
-        <div id="info-settings" class="info-text" hidden>
-          <p>Everything above lives in this browser and nowhere else. It does not follow you to another
-            machine, and clearing site data clears it. Export is how you move it, and how you keep a
-            copy. Nothing about your voice is ever in it.</p>
-        </div>
-        <div class="bar">
-          <button id="setExport" class="ghost">Export settings</button>
-          <input type="file" id="setImportFile" accept="application/json,.json" hidden>
-          <button id="setImport" class="ghost">Import settings</button>
-          <button id="setReset" class="ghost">Reset everything</button>
-        </div>
-      </section>
+        <section>
+          <div class="sec-head">
+            <h3 data-i18n="h.these">These settings</h3>
+            <button type="button" class="info" aria-expanded="false" aria-controls="info-settings"
+                    aria-label="Where settings are kept" data-i18n-attr="aria-label:h.theseAbout">i</button>
+          </div>
+          <div id="info-settings" class="info-text" hidden data-i18n="h.theseInfo">
+            <p>Everything above lives in this browser and nowhere else. It does not follow you to another
+              machine, and clearing site data clears it. Export is how you move it, and how you keep a
+              copy. Nothing about your voice is ever in it.</p>
+          </div>
+          <div class="bar">
+            <button id="setExport" class="ghost" data-i18n="h.export">Export settings</button>
+            <input type="file" id="setImportFile" accept="application/json,.json" hidden>
+            <button id="setImport" class="ghost" data-i18n="h.import">Import settings</button>
+            <button id="setReset" class="ghost" data-i18n="h.resetAll">Reset everything</button>
+          </div>
+        </section>
       </div>
     </details>
   </div>
-  <p class="sub">Your pitch and your vowel, while you are making them. Everything stays in this
+  <p class="sub" data-i18n="h.sub">Your pitch and your vowel, while you are making them. Everything stays in this
     browser: no upload, no account, no server.</p>
 </header>
 
 <noscript><p class="warn">This page is all JavaScript. With it off there is nothing here.</p></noscript>
-<p id="insecure" class="warn" hidden>This page is not on a secure origin, so the browser will not
+<p id="insecure" class="warn" hidden data-i18n="h.insecure">This page is not on a secure origin, so the browser will not
   give it a microphone. Open it over https, or from localhost.</p>
 
 <!--
@@ -126,20 +147,20 @@
 <main class="card">
   <div class="bar controls">
     <button id="start" class="primary">Start</button>
-    <div class="group" role="group" aria-label="Takes">
+    <div class="group" role="group" aria-label="Takes" data-i18n-attr="aria-label:h.takes">
       <button id="rec" disabled>Record</button>
-      <button id="keep" disabled>Keep last 30s</button>
+      <button id="keep" disabled data-i18n="h.keep">Keep last 30s</button>
       <button id="play" disabled>Play back</button>
     </div>
-    <div class="group" role="group" aria-label="Session">
-      <button id="cal" disabled>Calibrate</button>
-      <button id="reset">Reset</button>
+    <div class="group" role="group" aria-label="Session" data-i18n-attr="aria-label:h.session">
+      <button id="cal" disabled data-i18n="h.cal">Calibrate</button>
+      <button id="reset" data-i18n="h.reset">Reset</button>
     </div>
     <button type="button" class="info" aria-expanded="false" aria-controls="info-controls"
-            aria-label="What these buttons do">i</button>
+            aria-label="What these buttons do" data-i18n-attr="aria-label:h.controlsAbout">i</button>
     <span id="status" class="status" role="status" aria-live="polite"></span>
   </div>
-  <div id="info-controls" class="info-text" hidden>
+  <div id="info-controls" class="info-text" hidden data-i18n="h.controlsInfo">
     <p><b>Start</b> opens the microphone and begins showing your voice. <b>Stop</b> closes it again.</p>
     <p><b>Record</b> captures a take you can download, as lossless WAV or as a smaller compressed file.</p>
     <p><b>Keep last 30s</b> turns the last thirty seconds the microphone heard into a take, even if
@@ -154,32 +175,31 @@
   </div>
 
   <div class="io">
-  <div class="bar sub-bar">
-    <span class="label">Take</span>
-    <select id="format" disabled aria-label="Download format">
-      <option value="wav">WAV, lossless</option>
-      <option value="webm">Compressed</option>
-    </select>
-    <button id="download" disabled>Download</button>
-    <span id="take" class="dim">nothing recorded yet</span>
-  </div>
+    <div class="bar sub-bar">
+      <span class="label" data-i18n="h.take">Take</span>
+      <select id="format" disabled aria-label="Download format" data-i18n-attr="aria-label:h.format">
+        <option value="wav" data-i18n="h.wav">WAV, lossless</option>
+        <option value="webm" data-i18n="h.webm">Compressed</option>
+      </select>
+      <button id="download" disabled data-i18n="h.download">Download</button>
+      <span id="take" class="dim">nothing recorded yet</span>
+    </div>
 
-  <div class="bar sub-bar">
-    <span class="label">Play a file</span>
-    <input type="file" id="pick" accept="audio/*,video/*" hidden>
-    <button id="pickBtn" class="ghost">From disk</button>
-    <span id="clip" class="dim">nothing loaded</span>
+    <div class="bar sub-bar">
+      <span class="label" data-i18n="h.playFile">Play a file</span>
+      <input type="file" id="pick" accept="audio/*,video/*" hidden>
+      <button id="pickBtn" class="ghost" data-i18n="h.fromDisk">From disk</button>
+      <span id="clip" class="dim">nothing loaded</span>
+    </div>
   </div>
-  </div>
-
 
   <section class="panel" data-panel="pitch" aria-labelledby="h-pitch">
     <div class="panel-head">
-      <h2 id="h-pitch">Pitch</h2>
+      <h2 id="h-pitch" data-i18n="h.pitch">Pitch</h2>
       <button type="button" class="info" aria-expanded="false" aria-controls="info-pitch"
-              aria-label="About the pitch panel">i</button>
+              aria-label="About the pitch panel" data-i18n-attr="aria-label:h.pitchAbout">i</button>
     </div>
-    <div id="info-pitch" class="info-text" hidden>
+    <div id="info-pitch" class="info-text" hidden data-i18n="h.pitchInfo">
       <p>The line is your pitch over the last ten seconds, on a scale that gives each octave the
         same height. Gaps are silence, or a consonant with no voice in it: the page draws a gap
         rather than guessing.</p>
@@ -191,7 +211,7 @@
       <span id="now" class="big">—</span>
       <span id="median" class="dim"></span>
     </div>
-    <canvas id="trace" height="190" role="img"
+    <canvas id="trace" height="190" role="img" data-i18n-attr="aria-label:h.traceLabel"
             aria-label="Your pitch over the last ten seconds, against the reference bands. The current value and median are shown in text above."></canvas>
     <div id="share" class="share" aria-hidden="true"></div>
     <div id="legend" class="legend"></div>
@@ -199,77 +219,77 @@
 
   <section class="panel" data-panel="formants" aria-labelledby="h-formants">
     <div class="panel-head">
-      <h2 id="h-formants">Formants</h2>
+      <h2 id="h-formants" data-i18n="h.formants">Formants</h2>
       <button type="button" class="info" aria-expanded="false" aria-controls="info-formants"
-              aria-label="About the formants panel">i</button>
+              aria-label="About the formants panel" data-i18n-attr="aria-label:h.formantsAbout">i</button>
       <span id="formantNow" class="meta">—</span>
     </div>
-    <div id="info-formants" class="info-text" hidden>
+    <div id="info-formants" class="info-text" hidden data-i18n="h.formantsInfo">
       <p>The first three resonances of your vocal tract, over the same ten seconds as the pitch.
         F1 moves mostly with how open your jaw is, F2 with how far forward your tongue sits, and F3
         with the rest of the tract.</p>
       <p>These are raw frame-by-frame estimates, so they show the movement between vowels that the
         vowel plane below deliberately ignores. Gaps are unvoiced.</p>
     </div>
-    <canvas id="formants" height="150" role="img"
+    <canvas id="formants" height="150" role="img" data-i18n-attr="aria-label:h.formantsLabel"
             aria-label="F1, F2 and F3 over the last ten seconds. The latest values and session medians are shown in text."></canvas>
     <div id="formantKey" class="legend"></div>
   </section>
 
   <div class="stat-grid">
-  <section class="panel" data-panel="bright" aria-labelledby="h-bright">
-    <div class="panel-head">
-      <h2 id="h-bright">Brightness</h2>
-      <button type="button" class="info" aria-expanded="false" aria-controls="info-bright"
-              aria-label="About brightness">i</button>
-      <span id="brightNum" class="meta">—</span>
-    </div>
-    <div id="info-bright" class="info-text" hidden>
-      <p>The spectral centroid: the balance point of your voice's energy, in Hz. A brighter, more
-        forward sound moves it right; a darker one moves it left. It is what resonance exercises
-        change, and a pitch trace says nothing about it.</p>
-      <p>There is no target band here, because none is published. Watch which way it moves.</p>
-    </div>
-    <div id="brightBar" class="track"><div id="brightPin" class="pin"></div></div>
-    <div class="scale"><span id="brightLo"></span><span id="brightMed"></span><span id="brightHi"></span></div>
-  </section>
+    <section class="panel" data-panel="bright" aria-labelledby="h-bright">
+      <div class="panel-head">
+        <h2 id="h-bright" data-i18n="h.bright">Brightness</h2>
+        <button type="button" class="info" aria-expanded="false" aria-controls="info-bright"
+                aria-label="About brightness" data-i18n-attr="aria-label:h.brightAbout">i</button>
+        <span id="brightNum" class="meta">—</span>
+      </div>
+      <div id="info-bright" class="info-text" hidden data-i18n="h.brightInfo">
+        <p>The spectral centroid: the balance point of your voice's energy, in Hz. A brighter, more
+          forward sound moves it right; a darker one moves it left. It is what resonance exercises
+          change, and a pitch trace says nothing about it.</p>
+        <p>There is no target band here, because none is published. Watch which way it moves.</p>
+      </div>
+      <div id="brightBar" class="track"><div id="brightPin" class="pin"></div></div>
+      <div class="scale"><span id="brightLo"></span><span id="brightMed"></span><span id="brightHi"></span></div>
+    </section>
 
-  <section class="panel" data-panel="intone" aria-labelledby="h-intone">
-    <div class="panel-head">
-      <h2 id="h-intone">Intonation variability</h2>
-      <button type="button" class="info" aria-expanded="false" aria-controls="info-intone"
-              aria-label="About intonation variability">i</button>
-      <span id="intoneSess" class="meta">—</span>
-    </div>
-    <div id="info-intone" class="info-text" hidden>
-      <p>How far your pitch moves, in semitones, over the last ten seconds. The session figure sits
-        beside it. A flat delivery reads as masculine whatever its height.</p>
-    </div>
-    <div class="stat-row"><span id="intoneBig" class="mid">—</span><span class="dim">semitones</span></div>
-  </section>
+    <section class="panel" data-panel="intone" aria-labelledby="h-intone">
+      <div class="panel-head">
+        <h2 id="h-intone" data-i18n="h.intone">Intonation variability</h2>
+        <button type="button" class="info" aria-expanded="false" aria-controls="info-intone"
+                aria-label="About intonation variability" data-i18n-attr="aria-label:h.intoneAbout">i</button>
+        <span id="intoneSess" class="meta">—</span>
+      </div>
+      <div id="info-intone" class="info-text" hidden data-i18n="h.intoneInfo">
+        <p>How far your pitch moves, in semitones, over the last ten seconds. The session figure sits
+          beside it. A flat delivery reads as masculine whatever its height.</p>
+      </div>
+      <div class="stat-row"><span id="intoneBig" class="mid">—</span><span class="dim" data-i18n="h.semitones">semitones</span></div>
+    </section>
 
-  <section class="panel" data-panel="vtl" aria-labelledby="h-vtl">
-    <div class="panel-head">
-      <h2 id="h-vtl">Vocal tract length</h2>
-      <button type="button" class="info" aria-expanded="false" aria-controls="info-vtl"
-              aria-label="About vocal tract length">i</button>
-      <span id="vtlSess" class="meta">—</span>
-    </div>
-    <div id="info-vtl" class="info-text" hidden>
-      <p>Estimated from the spacing between F1 and F3, on held vowels only. It shortens when the
-        larynx rises. It is an index for watching change, not an anatomy measurement.</p>
-    </div>
-    <div class="stat-row"><span id="vtlBig" class="mid">—</span><span class="dim">cm</span></div>
-  </section>
+    <section class="panel" data-panel="vtl" aria-labelledby="h-vtl">
+      <div class="panel-head">
+        <h2 id="h-vtl" data-i18n="h.vtl">Vocal tract length</h2>
+        <button type="button" class="info" aria-expanded="false" aria-controls="info-vtl"
+                aria-label="About vocal tract length" data-i18n-attr="aria-label:h.vtlAbout">i</button>
+        <span id="vtlSess" class="meta">—</span>
+      </div>
+      <div id="info-vtl" class="info-text" hidden data-i18n="h.vtlInfo">
+        <p>Estimated from the spacing between F1 and F3, on held vowels only. It shortens when the
+          larynx rises. It is an index for watching change, not an anatomy measurement.</p>
+      </div>
+      <div class="stat-row"><span id="vtlBig" class="mid">—</span><span class="dim">cm</span></div>
+    </section>
   </div>
 
   <section class="panel" data-panel="plane" aria-labelledby="h-plane">
     <div class="panel-head">
-      <h2 id="h-plane">Vowel plane</h2>
+      <h2 id="h-plane" data-i18n="h.plane">Vowel plane</h2>
       <button type="button" class="info" aria-expanded="false" aria-controls="info-plane"
-              aria-label="How to read the vowel plane">i</button>
+              aria-label="How to read the vowel plane" data-i18n-attr="aria-label:h.planeAbout">i</button>
     </div>
-    <div id="info-plane" class="info-text" hidden>
+    <div id="info-plane" class="info-text" hidden data-i18n="h.planeInfo">
       <p>Read it as a mouth facing left: up is a higher tongue, left is a fronter one. The green
         dot is the last vowel you held. It turns solid once the vowel holds still, and stays faint on
         consonants and transitions.</p>
@@ -280,10 +300,10 @@
         way to move. Neither point is a goal the page chooses for you.</p>
     </div>
     <div class="bar sub-bar">
-      <label>Reference <select id="refLang"></select></label>
-      <label>Target <select id="target"><option value="">None</option></select></label>
+      <label><span data-i18n="h.reference">Reference</span> <select id="refLang"></select></label>
+      <label><span data-i18n="h.target">Target</span> <select id="target"><option value="">None</option></select></label>
     </div>
-    <canvas id="plane" height="260" role="img"
+    <canvas id="plane" height="260" role="img" data-i18n-attr="aria-label:h.planeLabel"
             aria-label="Vowel plane: your last held vowel against the reference vowels. Distances to a chosen target are given in text below."></canvas>
     <div id="hint" class="hint"></div>
     <p id="cite" class="faint"></p>
@@ -291,30 +311,32 @@
 
   <section class="panel" data-panel="say" aria-labelledby="h-say" hidden>
     <div class="panel-head">
-      <h2 id="h-say">Say</h2>
-      <span class="meta"><button id="sayNext" class="ghost tiny">Next</button></span>
+      <h2 id="h-say" data-i18n="h.say">Say</h2>
+      <span class="meta"><button id="sayNext" class="ghost tiny" data-i18n="h.next">Next</button></span>
     </div>
     <p id="sayLine" class="say"></p>
   </section>
 </main>
 
 <footer class="foot">
-<details class="fold">
-  <summary>What this is</summary>
-  <div class="fold-body">
-  <p><strong>A mirror, not a measurement.</strong> Press Start and it shows you your pitch and your
-    vowel as you make them. Each panel's <span class="i-inline">i</span> explains how to read it.</p>
-  <p><strong>Its numbers are not a measurement of you.</strong> The analysis runs on 85 milliseconds
-    of sound at a time, in a browser, through different algorithms from the ones a clinic uses.
-    Read it as a direction, never as a value, and never against a threshold.</p>
-  <p><strong>Nothing leaves this browser.</strong> No upload, no analytics, no account, no server.
-    The microphone is released when you press Stop or close the tab, and every figure on screen
-    dies with it. A take exists only until you download it or leave.</p>
-  <p id="sources" class="faint"></p>
-  <p class="faint">Free software under the <a href="LICENSE">GNU AGPL v3 or later</a>. The whole page is the
-    source: nothing runs anywhere but here.</p>
-  </div>
-</details>
+  <details class="fold">
+    <summary data-i18n="h.about">What this is</summary>
+    <div class="fold-body">
+      <div data-i18n="h.aboutText">
+        <p><strong>A mirror, not a measurement.</strong> Press Start and it shows you your pitch and your
+          vowel as you make them. Each panel's <span class="i-inline">i</span> explains how to read it.</p>
+        <p><strong>Its numbers are not a measurement of you.</strong> The analysis runs on 85 milliseconds
+          of sound at a time, in a browser, through different algorithms from the ones a clinic uses.
+          Read it as a direction, never as a value, and never against a threshold.</p>
+        <p><strong>Nothing leaves this browser.</strong> No upload, no analytics, no account, no server.
+          The microphone is released when you press Stop or close the tab, and every figure on screen
+          dies with it. A take exists only until you download it or leave.</p>
+      </div>
+      <p id="sources" class="faint"></p>
+      <p class="faint" data-i18n="h.licence">Free software under the <a href="LICENSE">GNU AGPL v3 or later</a>. The whole page is the
+        source: nothing runs anywhere but here.</p>
+    </div>
+  </details>
 </footer>
 
 <script type="module" src="js/main.js"></script>

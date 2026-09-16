@@ -112,7 +112,8 @@ h2 { font-size: 1rem; margin: 0 0 .4em 0; }
   border: 1px solid var(--border-strong); border-radius: calc(var(--radius-sm) + 2px);
   background: var(--surface);
 }
-.seg { height: 30px; min-width: 32px; padding: 0 7px; border-radius: 6px; }
+.seg { position: relative; height: 30px; min-width: 32px; padding: 0 7px; border-radius: 6px; }
+.lang-switch .seg { font-size: .76rem; font-weight: 650; letter-spacing: .04em; }
 .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
 .seg:hover { color: var(--ink); }
 .seg:has(input:checked) { color: var(--accent-ink); background: var(--accent); }

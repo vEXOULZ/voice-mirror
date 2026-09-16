@@ -7,6 +7,7 @@ import {
   TRACK_MAX, TRACK_GRID, TRACK_TONE
 } from "./constants.js";
 import { hull } from "./dsp.js";
+import { t, td } from "./i18n.js";
 
 const VOICE = "rgb(80,160,110)";   // this voice, on the plane
 
@@ -87,7 +88,7 @@ export const drawTrace = (cv, { trace, cursor, bands }) => {
   for (const b of bands) {
     const y1 = yOf(Math.min(b.high, F0_CEILING), h);
     const y2 = yOf(Math.max(b.low, F0_FLOOR), h);
-    const text = (b.name ? b.name + "  " : "") + b.low + "-" + b.high + " Hz";
+    const text = (b.name ? td(b.name) + "  " : "") + b.low + "-" + b.high + " Hz";
     g.globalAlpha = 0.8; g.fillStyle = T.ink;
     if (y2 - y1 >= 16) { g.textBaseline = "top"; g.fillText(text, AXIS + 6, y1 + 3); }
     else { g.textBaseline = "bottom"; g.fillText(text, AXIS + 6, Math.max(12, y1 - 2)); }
@@ -182,11 +183,11 @@ export const drawPlane = (cv, { rows, target, trail, smooth, steady }) => {
   // what up and left mean was only written in the footer, far from the chart.
   g.globalAlpha = 0.8;
   g.font = "11px system-ui, sans-serif";
-  g.fillText("F2 in Hz: tongue front to back", L + (w - L - R) / 2, h - 8);
+  g.fillText(t("plane.f2"), L + (w - L - R) / 2, h - 8);
   g.save();
   g.translate(10, TOP + (h - TOP - B) / 2);
   g.rotate(-Math.PI / 2);
-  g.fillText("F1 in Hz: tongue high to low", 0, 0);
+  g.fillText(t("plane.f1"), 0, 0);
   g.restore();
   g.textAlign = "left";
   g.font = "10px system-ui, sans-serif";

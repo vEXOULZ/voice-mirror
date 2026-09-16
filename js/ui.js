@@ -5,8 +5,9 @@
 // most of what that cost is simply gone.
 
 import {
-  ZONES, BRIGHT_SCALE, FPS, REF_NAME, TOL, CAL_SECONDS, TRACK_TONE
+  ZONES, BRIGHT_SCALE, FPS, TOL, CAL_SECONDS, TRACK_TONE
 } from "./constants.js";
+import { t, td, applyStatic } from "./i18n.js";
 import { bark, median, sd, semitones } from "./dsp.js";
 import { PANELS, hexToBand, bandToHex } from "./settings.js";
 
@@ -21,7 +22,7 @@ export const createUI = () => {
                     "formants", "formantNow", "formantKey",
                     "brightNum", "brightBar", "brightPin", "brightLo", "brightMed", "brightHi",
                     "intoneBig", "intoneSess", "vtlBig", "vtlSess", "refLang", "target",
-                    "plane", "hint", "cite", "sayNext", "sayLine", "sources", "theme",
+                    "plane", "hint", "cite", "sayNext", "sayLine", "sources", "theme", "lang",
                     "insecure", "bands", "bandAdd", "bandReset", "setExport", "setImport",
                     "setImportFile", "setReset"]) {
     el[id] = $(id);
@@ -71,13 +72,14 @@ export const createUI = () => {
   // reads while also trying to speak.
   let hasSentences = false;
   const boxes = {};
-  for (const [key, label] of PANELS) {
+  const panelLabels = {};
+  for (const [key] of PANELS) {
     const w = document.createElement("label");
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.onchange = () => ui.onPanel && ui.onPanel(key, cb.checked);
     const span = document.createElement("span");
-    span.textContent = label;
+    panelLabels[key] = span;
     w.append(cb, span);
     el.panels.append(w);
     boxes[key] = cb;
@@ -110,18 +112,18 @@ export const createUI = () => {
       row.className = "band";
 
       const name = document.createElement("input");
-      name.type = "text"; name.value = b.name; name.placeholder = "Name";
+      name.type = "text"; name.value = b.name; name.placeholder = t("band.name");
       const low = document.createElement("input");
       low.type = "number"; low.value = b.low; low.min = 40; low.max = 600; low.step = 1;
       const high = document.createElement("input");
       high.type = "number"; high.value = b.high; high.min = 40; high.max = 600; high.step = 1;
       const colour = document.createElement("input");
       colour.type = "color"; colour.value = bandToHex(b.color);
-      colour.title = "Drawn translucent, so it stays behind the trace.";
+      colour.title = t("band.colour");
       const drop = document.createElement("button");
-      drop.className = "ghost drop"; drop.textContent = "Remove";
+      drop.className = "ghost drop"; drop.textContent = t("band.remove");
 
-      const to = document.createElement("span"); to.textContent = "to";
+      const to = document.createElement("span"); to.textContent = t("band.to");
       const hz = document.createElement("span"); hz.textContent = "Hz";
 
       // A band is only committed when it makes sense: low under high, both
@@ -150,9 +152,13 @@ export const createUI = () => {
     el.share.append(c);
     return c;
   });
-  const legendEls = ZONES.map(([name, colour]) => {
+  // The zone names are their own element, so a change of language can rename
+  // them without touching the figure beside each.
+  const zoneNames = [];
+  const legendEls = ZONES.map(([, colour], i) => {
     const s = document.createElement("span");
-    s.innerHTML = '<i style="background:' + colour + '"></i>' + name + " <b>-</b>";
+    s.innerHTML = '<i style="background:' + colour + '"></i><span></span> <b>-</b>';
+    zoneNames[i] = s.querySelector("span");
     el.legend.append(s);
     return s.querySelector("b");
   });
@@ -169,18 +175,38 @@ export const createUI = () => {
   el.brightHi.textContent = BRIGHT_SCALE[1] + " Hz";
 
   // --- status -----------------------------------------------------------
-  ui.status = (text, bad) => {
-    el.status.textContent = text;
+  // Given a function rather than a string, so the line can be said again in
+  // another language without whoever set it having to know.
+  let lastStatus = null;
+  const said = say => (typeof say === "function" ? say() : say);
+  ui.status = (say, bad) => {
+    lastStatus = say;
+    el.status.textContent = said(say);
     el.status.classList.toggle("bad", !!bad);
+  };
+
+  // --- language ---------------------------------------------------------
+  // Everything with words in it, redone. The readouts fill themselves on the
+  // next frame, or from settle() when nothing is running.
+  let lastTake = null, lastClip = null, lastRef = null;
+  ui.relabel = () => {
+    applyStatic(document);
+    for (const [k] of PANELS) panelLabels[k].textContent = t("panel." + k);
+    zoneNames.forEach((n, i) => { n.textContent = t("zone." + i); });
+    if (lastStatus) el.status.textContent = said(lastStatus);
+    ui.showTake(lastTake);
+    ui.showClip(lastClip);
+    if (lastRef) ui.fillReference(...lastRef);
   };
 
   // --- reference --------------------------------------------------------
   ui.fillReference = (ref, langs, want, custom, customBands) => {
+    lastRef = [ref, langs, want, custom, customBands];
     el.refLang.replaceChildren();
     for (const l of langs) {
       const o = document.createElement("option");
       o.value = l;
-      o.textContent = ref.languages[l] || l;
+      o.textContent = td(ref.languages[l] || l);
       el.refLang.append(o);
     }
     el.refLang.value = langs.includes(want) ? want : (langs[0] || "");
@@ -191,7 +217,8 @@ export const createUI = () => {
     ui.sayAt = 0;
     ui.showSentence();
     el.refReset.disabled = !custom;
-    el.refName.textContent = custom ? "using " + (ref.name || "a custom reference") : "using the shipped reference";
+    el.refName.textContent = custom ? t("ref.using", { name: ref.name || t("ref.usingCustom") })
+                                    : t("ref.usingShipped");
   };
 
   // Target starts at None and stays there until you choose. Which reference
@@ -202,7 +229,7 @@ export const createUI = () => {
     el.target.replaceChildren();
     const none = document.createElement("option");
     none.value = "";
-    none.textContent = "None";
+    none.textContent = t("ref.none");
     el.target.append(none);
     for (const v of ref.vowels.filter(v => v.lang === el.refLang.value)) {
       const o = document.createElement("option");
@@ -225,9 +252,9 @@ export const createUI = () => {
   ui.showSources = (ref, customBands) => {
     el.cite.textContent = ref.sources[el.refLang.value] || "";
     const parts = [];
-    if (ref.name) parts.push("Reference: " + ref.name.replace(/\.$/, "") + ".");
-    if (customBands) parts.push("Pitch bands: your own, set in Settings.");
-    else if (ref.sources.pitch_bands) parts.push("Pitch bands: " + ref.sources.pitch_bands);
+    if (ref.name) parts.push(t("src.reference", { name: td(ref.name).replace(/\.$/, "") }));
+    if (customBands) parts.push(t("src.bandsOwn"));
+    else if (ref.sources.pitch_bands) parts.push(t("src.bands", { text: td(ref.sources.pitch_bands) }));
     el.sources.textContent = parts.join(" ");
   };
 
@@ -262,8 +289,9 @@ export const createUI = () => {
       // a real median. One decimal until there is enough time for it not to
       // matter.
       const secs = s.voiced.length / FPS;
-      el.median.textContent = "median " + Math.round(median(s.voiced)) + " Hz over " +
-        secs.toFixed(secs < 10 ? 1 : 0) + "s voiced";
+      el.median.textContent = t("read.median", {
+        hz: Math.round(median(s.voiced)), secs: secs.toFixed(secs < 10 ? 1 : 0)
+      });
       const total = s.voiced.length;
       s.counts.forEach((n, i) => {
         const pct = 100 * n / total;
@@ -277,8 +305,9 @@ export const createUI = () => {
       e.textContent = formant && formant[k] != null ? Math.round(formant[k]) + " Hz" : "—";
     });
     if (s.formantMed.some(v => v != null)) {
-      el.formantNow.textContent = "medians " +
-        s.formantMed.map(v => (v == null ? "—" : Math.round(v))).join(" / ") + " Hz";
+      el.formantNow.textContent = t("read.medians", {
+        values: s.formantMed.map(v => (v == null ? "—" : Math.round(v))).join(" / ")
+      });
     }
     if (s.brights.length) {
       const b = s.brights[s.brights.length - 1];
@@ -289,9 +318,9 @@ export const createUI = () => {
       el.brightPin.classList.toggle("off-low", low);
       el.brightPin.classList.toggle("off-high", high);
       el.brightNum.textContent = Math.round(b) + " Hz" +
-        (low ? ", below the bar" : high ? ", above the bar" : "");
+        (low ? t("read.below") : high ? t("read.above") : "");
       el.brightPin.style.left = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
-      el.brightMed.textContent = "median " + Math.round(median(s.brights)) + " Hz";
+      el.brightMed.textContent = t("read.brightMedian", { hz: Math.round(median(s.brights)) });
     }
     // Standard deviation of f0 in semitones, the same quantity the offline
     // measure holds. Over the last ten seconds, because how much your pitch is
@@ -299,12 +328,11 @@ export const createUI = () => {
     if (s.voiced.length > 4) {
       const win = sd(s.f0Recent.map(r => semitones(r[1])));
       el.intoneBig.textContent = win == null ? "—" : win.toFixed(2);
-      el.intoneSess.textContent = "session " + sd(s.voiced.map(semitones)).toFixed(2) + " ST";
+      el.intoneSess.textContent = t("read.session", { sd: sd(s.voiced.map(semitones)).toFixed(2) });
     }
     if (s.vtls.length) {
       el.vtlBig.textContent = s.vtls[s.vtls.length - 1].toFixed(1);
-      el.vtlSess.textContent = "median " + median(s.vtls).toFixed(1) + " cm over " +
-        s.vtls.length + " vowels";
+      el.vtlSess.textContent = t("read.vtlMedian", { cm: median(s.vtls).toFixed(1), n: s.vtls.length });
     }
   };
 
@@ -314,12 +342,12 @@ export const createUI = () => {
   ui.advise = (tgt, tracker) => {
     if (!tgt) {
       el.hint.textContent = tracker.target
-        ? "No target chosen. The dot is the last vowel you held."
-        : "No target chosen. Sustain a vowel and the dot appears.";
+        ? t("hint.noTargetDot")
+        : t("hint.noTarget");
       return;
     }
     if (!tracker.target) {
-      el.hint.textContent = "Sustain a vowel. The dot moves on held vowels, not on transitions.";
+      el.hint.textContent = t("hint.sustain");
       return;
     }
     // Read off the position being drawn: a number that disagreed with the dot
@@ -329,27 +357,28 @@ export const createUI = () => {
       const d1 = bark(tgt[k + "_f1"]) - bark(tracker.target[0]);
       const d2 = bark(tgt[k + "_f2"]) - bark(tracker.target[1]);
       const say = [];
-      if (d1 > TOL) say.push("open the jaw, or lower the tongue");
-      else if (d1 < -TOL) say.push("close the jaw, or raise the tongue");
-      if (d2 > TOL) say.push("tongue forward, or unround the lips");
-      else if (d2 < -TOL) say.push("tongue back, or round the lips");
-      lines.push(REF_NAME[k] + "  F1 " + Math.round(tgt[k + "_f1"]) + ", F2 " +
+      if (d1 > TOL) say.push(t("hint.open"));
+      else if (d1 < -TOL) say.push(t("hint.close"));
+      if (d2 > TOL) say.push(t("hint.forward"));
+      else if (d2 < -TOL) say.push(t("hint.back"));
+      lines.push(t(k === "w" ? "hint.women" : "hint.men") + "  F1 " + Math.round(tgt[k + "_f1"]) + ", F2 " +
         Math.round(tgt[k + "_f2"]) + "  ·  " + Math.hypot(d1, d2).toFixed(2) + " Bark  ·  " +
-        (say.length ? say.join("; ") : "on target"));
+        (say.length ? say.join("; ") : t("hint.onTarget")));
     }
-    el.hint.textContent = "you  F1 " + Math.round(tracker.target[0]) +
+    el.hint.textContent = t("hint.you") + "  F1 " + Math.round(tracker.target[0]) +
       ", F2 " + Math.round(tracker.target[1]) +
-      (tracker.steady ? "" : "   (not steady yet)") + "\n" + lines.join("\n");
+      (tracker.steady ? "" : t("hint.notSteady")) + "\n" + lines.join("\n");
   };
 
   // --- what a take is, in words -----------------------------------------
   ui.showTake = take => {
+    lastTake = take;
     el.format.disabled = !take;
     el.download.disabled = !take;
-    if (!take) { el.take.textContent = "nothing recorded yet"; return; }
+    if (!take) { el.take.textContent = t("take.none"); return; }
     const has = [];
-    if (take.wav) has.push("WAV");
-    if (take.compressed) has.push("compressed");
+    if (take.wav) has.push(t("take.wav"));
+    if (take.compressed) has.push(t("take.compressed"));
     // The option is greyed rather than hidden: a take that exists in one
     // format only should say which, not quietly offer the other.
     for (const o of el.format.options) {
@@ -359,15 +388,16 @@ export const createUI = () => {
       el.format.value = take.wav ? "wav" : "webm";
     }
     const secs = take.seconds ? ", " + take.seconds.toFixed(0) + "s" : "";
-    el.take.textContent = "take ready" + secs + ": " + has.join(" and ") +
-      (take.capped ? "  (the lossless copy stopped at the cap)" : "");
+    el.take.textContent = t("take.ready", { secs, formats: has.join(t("take.and")) }) +
+      (take.capped ? t("take.capped") : "");
   };
 
   ui.showClip = name => {
-    el.clip.textContent = name ? "loaded " + name : "nothing loaded";
+    lastClip = name;
+    el.clip.textContent = name ? t("clip.loaded", { name }) : t("clip.none");
   };
 
-  ui.calibrating = () => ui.status("Calibrating. Stay quiet for " + CAL_SECONDS + " seconds.");
+  ui.calibrating = () => ui.status(() => t("status.calibrating", { secs: CAL_SECONDS }));
 
   ui.blank();
   return ui;

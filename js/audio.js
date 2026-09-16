@@ -2,6 +2,7 @@
 // downloads. Everything that touches hardware or a file is here, so the frame
 // loop above it only ever asks for numbers.
 
+import { t } from "./i18n.js";
 import { FFT, WORK_RATE, REWIND_S, TAP, PCM_CAP_S } from "./constants.js";
 import { makeTaps } from "./dsp.js";
 import { encodeWav, floatToInt16, int16ToFloat } from "./wav.js";
@@ -91,7 +92,7 @@ export const createEngine = () => {
   // --- microphone ---------------------------------------------------------
   st.startMic = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error("This browser gives the page no microphone API.");
+      throw new Error(t("err.noMic"));
     }
     st.stream = await navigator.mediaDevices.getUserMedia({
       // All three are built to make speech survive a phone line, and all three

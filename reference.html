@@ -3,22 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reference files</title>
-<meta name="description" content="The reference files Voice mirror draws its pitch bands and vowel diamonds from: the format, and the shipped sets to read or download.">
+<title data-i18n="rp.h.title">Reference files</title>
+<meta name="description" data-i18n-attr="content:rp.h.description" content="The reference files Voice mirror draws its pitch bands and vowel diamonds from: the format, and the shipped sets to read or download.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🎙</text></svg>">
 <link rel="stylesheet" href="app.css">
 </head>
 <body class="doc">
 
 <header class="head">
-  <h1>Reference files</h1>
+  <h1 data-i18n="rp.h.title">Reference files</h1>
   <div class="head-tools">
+    <div id="lang" class="theme-switch lang-switch" role="radiogroup" aria-label="Language"
+         data-i18n-attr="aria-label:h.language">
+      <label class="seg" title="English">
+        <input type="radio" name="lang" value="en" aria-label="English"><span lang="en">EN</span>
+      </label>
+      <label class="seg" title="Português">
+        <input type="radio" name="lang" value="pt" aria-label="Português"><span lang="pt-BR">PT</span>
+      </label>
+    </div>
     <a class="tool" href="./">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-      <span>Back to Voice mirror</span>
+      <span class="tool-label" data-i18n="rp.h.back">Back to Voice mirror</span>
     </a>
   </div>
-  <p class="sub">What the pitch bands and vowel diamonds are drawn from. Read the two shipped sets
+  <p class="sub" data-i18n="rp.h.sub">What the pitch bands and vowel diamonds are drawn from. Read the two shipped sets
     here, or download one as a starting point for your own and load it under Settings.</p>
 </header>
 
@@ -28,13 +37,13 @@
 
 <main>
   <section class="card" aria-labelledby="h-sets">
-    <h2 id="h-sets">Shipped references</h2>
-    <div id="sets" class="sets"><p class="dim">Loading…</p></div>
+    <h2 id="h-sets" data-i18n="rp.h.sets">Shipped references</h2>
+    <div id="sets" class="sets"><p class="dim" data-i18n="rp.h.loading">Loading…</p></div>
   </section>
 
-  <!-- The heading comes from data/reference.md itself. -->
-  <section class="card prose" aria-label="The file format">
-    <div id="format"><p class="dim">Loading…</p></div>
+  <!-- The heading comes from the Markdown file itself. -->
+  <section class="card prose" aria-label="The file format" data-i18n-attr="aria-label:rp.h.format">
+    <div id="format"><p class="dim" data-i18n="rp.h.loading">Loading…</p></div>
   </section>
 </main>
 

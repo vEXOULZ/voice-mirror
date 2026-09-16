@@ -1,4 +1,4 @@
-// What this browser remembers: the theme, which panels are on, your own pitch
+// What this browser remembers: the theme, the language, which panels are on, your own pitch
 // bands, and a custom reference set if you loaded one.
 //
 // One key, one object, and the whole thing exports to a file. Settings live in
@@ -9,6 +9,8 @@
 // Every read and write of localStorage is allowed to fail. It throws in a
 // private window in some browsers, and losing your theme is not a reason for
 // the page to stop working.
+
+import { t } from "./i18n.js";
 
 export const KEY = "voice-mirror-settings";
 export const VERSION = 1;
@@ -26,6 +28,8 @@ export const PANELS = [
 export const defaults = () => ({
   version: VERSION,
   theme: "system",
+  // null means "whatever the browser prefers", worked out when the page opens.
+  lang: null,
   panels: Object.fromEntries(PANELS.map(([k, , d]) => [k, d])),
   // null means "whatever the reference file says", which is the shipped case.
   // An array here is yours and wins over it.
@@ -41,6 +45,7 @@ export const normalise = raw => {
   if (!raw || typeof raw !== "object") return out;
 
   if (["system", "light", "dark"].includes(raw.theme)) out.theme = raw.theme;
+  if (["en", "pt"].includes(raw.lang)) out.lang = raw.lang;
 
   if (raw.panels && typeof raw.panels === "object") {
     for (const [k] of PANELS) if (k in raw.panels) out.panels[k] = !!raw.panels[k];
@@ -111,15 +116,14 @@ export const toFile = s => JSON.stringify({ ...s, version: VERSION }, null, 1);
 export const fromFile = text => {
   let raw;
   try { raw = JSON.parse(text); }
-  catch (e) { throw new Error("that file is not JSON: " + e.message); }
-  if (!raw || typeof raw !== "object") throw new Error("that file is not a JSON object.");
+  catch (e) { throw new Error(t("err.notJson", { error: e.message })); }
+  if (!raw || typeof raw !== "object") throw new Error(t("err.notObject"));
   // A reference file and a settings file are both JSON and both plausible to
   // hand to either button, so say which this looks like instead of quietly
   // producing a default.
-  if (!("theme" in raw) && !("panels" in raw) && !("bands" in raw) && !("reference" in raw)) {
-    throw new Error(raw.vowel_reference || raw.pitch_bands
-      ? "that looks like a reference file, not a settings file. Load it with Load reference."
-      : "no settings in that file.");
+  if (!("theme" in raw) && !("panels" in raw) && !("bands" in raw) && !("reference" in raw) &&
+      !("lang" in raw)) {
+    throw new Error(t(raw.vowel_reference || raw.pitch_bands ? "err.isReference" : "err.noSettings"));
   }
   return normalise(raw);
 };
