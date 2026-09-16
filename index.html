@@ -11,31 +11,152 @@
 <body>
 
 <header class="head">
-  <div>
-    <h1>Voice mirror</h1>
-    <p class="sub">Your pitch and your vowel, while you are making them. Everything stays in this
-      browser: no upload, no account, no server.</p>
+  <h1>Voice mirror</h1>
+  <div class="head-tools">
+    <!-- System is the default and sits in the middle: light and dark are the
+         two overrides either side of it. -->
+    <div id="theme" class="theme-switch" role="radiogroup" aria-label="Theme">
+      <label class="seg" title="Light">
+        <input type="radio" name="theme" value="light" aria-label="Light theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </label>
+      <label class="seg" title="Follow the system">
+        <input type="radio" name="theme" value="system" aria-label="Follow the system theme" checked>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+      </label>
+      <label class="seg" title="Dark">
+        <input type="radio" name="theme" value="dark" aria-label="Dark theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      </label>
+    </div>
+
+    <details id="settings" class="settings">
+      <summary class="tool" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span class="tool-label">Settings</span>
+      </summary>
+      <div class="settings-panel">
+      <div class="settings-top">
+        <h2>Settings</h2>
+        <button type="button" id="setClose" class="ghost">Done</button>
+      </div>
+
+      <section>
+        <h3>Show</h3>
+        <div id="panels" class="panel-bar"></div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <h3>Pitch bands</h3>
+          <button type="button" class="info" aria-expanded="false" aria-controls="info-bands"
+                  aria-label="About pitch bands">i</button>
+        </div>
+        <div id="info-bands" class="info-text" hidden>
+          <p>The shaded ranges on the pitch trace, and the five zones the share bar counts: below the
+            lower band, the lower band, the gap between, the upper band, and above the upper.</p>
+          <p>They are a reference, not a target. Use your clinician's if they differ. Changes apply as
+            you type, and the whole session is recounted against the new bands.</p>
+        </div>
+        <div id="bands" class="bands"></div>
+        <div class="bar">
+          <button id="bandAdd" class="ghost">Add a band</button>
+          <button id="bandReset" class="ghost">Back to the shipped bands</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <h3>Reference vowels</h3>
+          <button type="button" class="info" aria-expanded="false" aria-controls="info-ref"
+                  aria-label="About reference vowels">i</button>
+        </div>
+        <div id="info-ref" class="info-text" hidden>
+          <p>The diamonds on the vowel plane and the entries in Target. Load a JSON file to use your
+            own: your clinician's values, another language, or your own practice sentences.</p>
+          <p>It is read here and saved in this browser, never uploaded. The format is on
+            <a href="reference.html">the reference page</a>, beside the two shipped sets to read or
+            download as a starting point. You can also drop the file anywhere on this page.</p>
+        </div>
+        <div class="bar">
+          <input type="file" id="pickRef" accept="application/json,.json" hidden>
+          <button id="pickRefBtn" class="ghost">Load reference</button>
+          <button id="refReset" class="ghost" disabled>Back to the shipped reference</button>
+          <a class="ghost-link" href="reference.html">View the shipped references</a>
+          <span id="refName" class="dim"></span>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <h3>These settings</h3>
+          <button type="button" class="info" aria-expanded="false" aria-controls="info-settings"
+                  aria-label="Where settings are kept">i</button>
+        </div>
+        <div id="info-settings" class="info-text" hidden>
+          <p>Everything above lives in this browser and nowhere else. It does not follow you to another
+            machine, and clearing site data clears it. Export is how you move it, and how you keep a
+            copy. Nothing about your voice is ever in it.</p>
+        </div>
+        <div class="bar">
+          <button id="setExport" class="ghost">Export settings</button>
+          <input type="file" id="setImportFile" accept="application/json,.json" hidden>
+          <button id="setImport" class="ghost">Import settings</button>
+          <button id="setReset" class="ghost">Reset everything</button>
+        </div>
+      </section>
+      </div>
+    </details>
   </div>
+  <p class="sub">Your pitch and your vowel, while you are making them. Everything stays in this
+    browser: no upload, no account, no server.</p>
 </header>
 
 <noscript><p class="warn">This page is all JavaScript. With it off there is nothing here.</p></noscript>
 <p id="insecure" class="warn" hidden>This page is not on a secure origin, so the browser will not
   give it a microphone. Open it over https, or from localhost.</p>
 
-<section class="card">
-  <div class="bar">
-    <button id="start">Start</button>
-    <button id="rec" disabled>Record</button>
-    <button id="keep" disabled title="Turn the last thirty seconds the microphone heard into a take, whether or not Record was on.">Keep last 30s</button>
-    <button id="play" disabled>Play back</button>
-    <button id="cal" disabled title="Listen to the room for a few seconds and set the silence threshold from it.">Calibrate</button>
-    <button id="reset" title="Clear every figure on screen and start a fresh pass. Nothing recorded or loaded is lost.">Reset</button>
-    <span id="status" class="status"></span>
+<!--
+  Every explanation on the page sits behind a small (i) button rather than in a
+  hover tooltip: a tooltip does not exist on a touch screen, and a paragraph
+  under every panel is more than anyone reads while speaking. ui.js wires any
+  .info button to the element its aria-controls names.
+-->
+
+<main class="card">
+  <div class="bar controls">
+    <button id="start" class="primary">Start</button>
+    <div class="group" role="group" aria-label="Takes">
+      <button id="rec" disabled>Record</button>
+      <button id="keep" disabled>Keep last 30s</button>
+      <button id="play" disabled>Play back</button>
+    </div>
+    <div class="group" role="group" aria-label="Session">
+      <button id="cal" disabled>Calibrate</button>
+      <button id="reset">Reset</button>
+    </div>
+    <button type="button" class="info" aria-expanded="false" aria-controls="info-controls"
+            aria-label="What these buttons do">i</button>
+    <span id="status" class="status" role="status" aria-live="polite"></span>
+  </div>
+  <div id="info-controls" class="info-text" hidden>
+    <p><b>Start</b> opens the microphone and begins showing your voice. <b>Stop</b> closes it again.</p>
+    <p><b>Record</b> captures a take you can download, as lossless WAV or as a smaller compressed file.</p>
+    <p><b>Keep last 30s</b> turns the last thirty seconds the microphone heard into a take, even if
+      Record was off. It still works after you press Stop, so a phrase you only realise was good
+      afterwards is not lost. It is WAV only.</p>
+    <p><b>Play back</b> runs the loaded take or file through the same analysis, so everything moves
+      as it did live, without the room adding to it.</p>
+    <p><b>Calibrate</b> listens to your room for a few seconds, staying quiet, and sets how loud a
+      sound has to be before it counts as voice. Use it if the trace picks up background noise, or
+      misses a quiet voice.</p>
+    <p><b>Reset</b> clears every figure on screen. Recordings and loaded files are kept.</p>
   </div>
 
+  <div class="io">
   <div class="bar sub-bar">
     <span class="label">Take</span>
-    <select id="format" disabled>
+    <select id="format" disabled aria-label="Download format">
       <option value="wav">WAV, lossless</option>
       <option value="webm">Compressed</option>
     </select>
@@ -49,140 +170,151 @@
     <button id="pickBtn" class="ghost">From disk</button>
     <span id="clip" class="dim">nothing loaded</span>
   </div>
+  </div>
 
-  <details id="settings" class="settings">
-    <summary>Settings</summary>
 
-    <div class="set-grid">
-      <section>
-        <h3>Show</h3>
-        <div id="panels" class="panel-bar"></div>
-      </section>
-
-      <section>
-        <h3>Theme</h3>
-        <label>Follow the system, or pick one
-          <select id="theme">
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </label>
-      </section>
+  <section class="panel" data-panel="pitch" aria-labelledby="h-pitch">
+    <div class="panel-head">
+      <h2 id="h-pitch">Pitch</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="info-pitch"
+              aria-label="About the pitch panel">i</button>
     </div>
-
-    <section>
-      <h3>Pitch bands</h3>
-      <p class="faint">The shaded ranges on the pitch trace, and the five zones the share bar
-        counts: below the lower band, the lower band, the gap between, the upper band, above the
-        upper. They are a reference, not a target. Use your clinician's if they differ.</p>
-      <div id="bands" class="bands"></div>
-      <div class="bar">
-        <button id="bandAdd" class="ghost">Add a band</button>
-        <button id="bandReset" class="ghost">Back to the shipped bands</button>
-      </div>
-    </section>
-
-    <section>
-      <h3>Reference vowels</h3>
-      <p class="faint">The diamonds on the vowel plane and the entries in Target. Load a JSON file
-        to use your own: your clinician's values, another language, or your own practice sentences.
-        It is read here and saved in this browser, never uploaded. The format is in
-        <a href="data/reference.md">data/reference.md</a>.</p>
-      <div class="bar">
-        <input type="file" id="pickRef" accept="application/json,.json" hidden>
-        <button id="pickRefBtn" class="ghost">Load reference</button>
-        <button id="refReset" class="ghost" disabled>Back to the shipped reference</button>
-        <span id="refName" class="dim"></span>
-      </div>
-    </section>
-
-    <section>
-      <h3>These settings</h3>
-      <p class="faint">Everything above lives in this browser and nowhere else. It does not follow
-        you to another machine, and clearing site data clears it. Export is how you move it, and how
-        you keep a copy.</p>
-      <div class="bar">
-        <button id="setExport" class="ghost">Export settings</button>
-        <input type="file" id="setImportFile" accept="application/json,.json" hidden>
-        <button id="setImport" class="ghost">Import settings</button>
-        <button id="setReset" class="ghost">Reset everything</button>
-      </div>
-    </section>
-  </details>
-
-  <div data-panel="pitch">
+    <div id="info-pitch" class="info-text" hidden>
+      <p>The line is your pitch over the last ten seconds, on a scale that gives each octave the
+        same height. Gaps are silence, or a consonant with no voice in it: the page draws a gap
+        rather than guessing.</p>
+      <p>The shaded areas are the reference bands you can change in Settings. The bar underneath
+        shows how your voiced time this session splits across five zones: below the lower band,
+        inside it, between the two, inside the upper band, and above it.</p>
+    </div>
     <div class="readout">
-      <span id="now" class="big">-</span>
+      <span id="now" class="big">—</span>
       <span id="median" class="dim"></span>
     </div>
-    <canvas id="trace" height="190"></canvas>
-    <div id="share" class="share"></div>
+    <canvas id="trace" height="190" role="img"
+            aria-label="Your pitch over the last ten seconds, against the reference bands. The current value and median are shown in text above."></canvas>
+    <div id="share" class="share" aria-hidden="true"></div>
     <div id="legend" class="legend"></div>
-  </div>
+  </section>
 
-  <div data-panel="formants">
-    <div class="stat-head"><span>Formants</span><span id="formantNow" class="dim">-</span></div>
-    <canvas id="formants" height="150"></canvas>
+  <section class="panel" data-panel="formants" aria-labelledby="h-formants">
+    <div class="panel-head">
+      <h2 id="h-formants">Formants</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="info-formants"
+              aria-label="About the formants panel">i</button>
+      <span id="formantNow" class="meta">—</span>
+    </div>
+    <div id="info-formants" class="info-text" hidden>
+      <p>The first three resonances of your vocal tract, over the same ten seconds as the pitch.
+        F1 moves mostly with how open your jaw is, F2 with how far forward your tongue sits, and F3
+        with the rest of the tract.</p>
+      <p>These are raw frame-by-frame estimates, so they show the movement between vowels that the
+        vowel plane below deliberately ignores. Gaps are unvoiced.</p>
+    </div>
+    <canvas id="formants" height="150" role="img"
+            aria-label="F1, F2 and F3 over the last ten seconds. The latest values and session medians are shown in text."></canvas>
     <div id="formantKey" class="legend"></div>
-  </div>
+  </section>
 
-  <div data-panel="bright" class="stat">
-    <div class="stat-head"><span>Brightness (spectral centroid)</span><span id="brightNum">-</span></div>
+  <div class="stat-grid">
+  <section class="panel" data-panel="bright" aria-labelledby="h-bright">
+    <div class="panel-head">
+      <h2 id="h-bright">Brightness</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="info-bright"
+              aria-label="About brightness">i</button>
+      <span id="brightNum" class="meta">—</span>
+    </div>
+    <div id="info-bright" class="info-text" hidden>
+      <p>The spectral centroid: the balance point of your voice's energy, in Hz. A brighter, more
+        forward sound moves it right; a darker one moves it left. It is what resonance exercises
+        change, and a pitch trace says nothing about it.</p>
+      <p>There is no target band here, because none is published. Watch which way it moves.</p>
+    </div>
     <div id="brightBar" class="track"><div id="brightPin" class="pin"></div></div>
     <div class="scale"><span id="brightLo"></span><span id="brightMed"></span><span id="brightHi"></span></div>
+  </section>
+
+  <section class="panel" data-panel="intone" aria-labelledby="h-intone">
+    <div class="panel-head">
+      <h2 id="h-intone">Intonation variability</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="info-intone"
+              aria-label="About intonation variability">i</button>
+      <span id="intoneSess" class="meta">—</span>
+    </div>
+    <div id="info-intone" class="info-text" hidden>
+      <p>How far your pitch moves, in semitones, over the last ten seconds. The session figure sits
+        beside it. A flat delivery reads as masculine whatever its height.</p>
+    </div>
+    <div class="stat-row"><span id="intoneBig" class="mid">—</span><span class="dim">semitones</span></div>
+  </section>
+
+  <section class="panel" data-panel="vtl" aria-labelledby="h-vtl">
+    <div class="panel-head">
+      <h2 id="h-vtl">Vocal tract length</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="info-vtl"
+              aria-label="About vocal tract length">i</button>
+      <span id="vtlSess" class="meta">—</span>
+    </div>
+    <div id="info-vtl" class="info-text" hidden>
+      <p>Estimated from the spacing between F1 and F3, on held vowels only. It shortens when the
+        larynx rises. It is an index for watching change, not an anatomy measurement.</p>
+    </div>
+    <div class="stat-row"><span id="vtlBig" class="mid">—</span><span class="dim">cm</span></div>
+  </section>
   </div>
 
-  <div data-panel="intone" class="stat">
-    <div class="stat-head"><span>Intonation variability</span><span id="intoneSess">-</span></div>
-    <div class="stat-row"><span id="intoneBig" class="mid">-</span><span class="dim">ST</span></div>
-    <p class="faint">How far your pitch moves, in semitones. A flat delivery reads as masculine
-      whatever its height.</p>
-  </div>
-
-  <div data-panel="vtl" class="stat">
-    <div class="stat-head"><span>Vocal tract length</span><span id="vtlSess">-</span></div>
-    <div class="stat-row"><span id="vtlBig" class="mid">-</span><span class="dim">cm</span></div>
-    <p class="faint">From the spacing of F1 to F3. Shortens when the larynx rises. An index, not an
-      anatomy measurement.</p>
-  </div>
-
-  <div data-panel="plane">
+  <section class="panel" data-panel="plane" aria-labelledby="h-plane">
+    <div class="panel-head">
+      <h2 id="h-plane">Vowel plane</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="info-plane"
+              aria-label="How to read the vowel plane">i</button>
+    </div>
+    <div id="info-plane" class="info-text" hidden>
+      <p>Read it as a mouth facing left: up is a higher tongue, left is a fronter one. The green
+        dot is the last vowel you held. It turns solid once the vowel holds still, and stays faint on
+        consonants and transitions.</p>
+      <p>The diamonds are published averages for women (pink) and men (blue) saying single words.
+        Running speech sits inside them even when nothing about a voice differs, so read position
+        and spread, not distance to a diamond.</p>
+      <p>Pick a Target to see how far you are from both reference points for that vowel, and which
+        way to move. Neither point is a goal the page chooses for you.</p>
+    </div>
     <div class="bar sub-bar">
       <label>Reference <select id="refLang"></select></label>
       <label>Target <select id="target"><option value="">None</option></select></label>
     </div>
-    <canvas id="plane" height="260"></canvas>
+    <canvas id="plane" height="260" role="img"
+            aria-label="Vowel plane: your last held vowel against the reference vowels. Distances to a chosen target are given in text below."></canvas>
     <div id="hint" class="hint"></div>
     <p id="cite" class="faint"></p>
-  </div>
+  </section>
 
-  <div data-panel="say" class="stat" hidden>
-    <div class="stat-head"><span>Say</span><span><button id="sayNext" class="ghost tiny">Next</button></span></div>
+  <section class="panel" data-panel="say" aria-labelledby="h-say" hidden>
+    <div class="panel-head">
+      <h2 id="h-say">Say</h2>
+      <span class="meta"><button id="sayNext" class="ghost tiny">Next</button></span>
+    </div>
     <p id="sayLine" class="say"></p>
-  </div>
-</section>
+  </section>
+</main>
 
 <footer class="foot">
-  <h2>What this is</h2>
-  <p><strong>A mirror, not a measurement.</strong> Press Start and it shows you two things as you
-    make them. The <strong>trace</strong> is your pitch against reference bands you can set yourself. The
-    <strong>plane</strong> below it is your vowel, F1 and F2, with published reference vowels as
-    diamonds. Read it as a mouth facing left: up is a higher tongue, left is a fronter one.</p>
+<details class="fold">
+  <summary>What this is</summary>
+  <div class="fold-body">
+  <p><strong>A mirror, not a measurement.</strong> Press Start and it shows you your pitch and your
+    vowel as you make them. Each panel's <span class="i-inline">i</span> explains how to read it.</p>
   <p><strong>Its numbers are not a measurement of you.</strong> The analysis runs on 85 milliseconds
     of sound at a time, in a browser, through different algorithms from the ones a clinic uses.
     Read it as a direction, never as a value, and never against a threshold.</p>
-  <p><strong>Running speech sits inside the diamonds</strong> even when nothing about a voice
-    differs, because vowels reduce toward the centre when they are not said in isolation. Read
-    position and spread, not distance to a diamond. The reference sets are averages of other
-    people reading isolated words, and neither of them is a target: where they sit is a fact,
-    which of them is a goal is between you and your clinician.</p>
   <p><strong>Nothing leaves this browser.</strong> No upload, no analytics, no account, no server.
     The microphone is released when you press Stop or close the tab, and every figure on screen
     dies with it. A take exists only until you download it or leave.</p>
   <p id="sources" class="faint"></p>
   <p class="faint">Free software under the <a href="LICENSE">GNU AGPL v3 or later</a>. The whole page is the
     source: nothing runs anywhere but here.</p>
+  </div>
+</details>
 </footer>
 
 <script type="module" src="js/main.js"></script>

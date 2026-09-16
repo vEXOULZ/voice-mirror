@@ -32,8 +32,8 @@
     { "lang": "pt", "vowel": "u",  "word": "u",      "m_f1": 310, "m_f2": 761,  "w_f1": 337, "w_f2": 812 }
   ],
   "languages": {
-    "pt": "Brazilian Portuguese (Escudero et al. 2009)",
-    "en": "American English (Hillenbrand et al. 1995)"
+    "pt": "Portuguese (Brazil)",
+    "en": "English (US)"
   },
   "sentences": []
 }

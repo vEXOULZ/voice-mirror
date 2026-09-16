@@ -28,14 +28,43 @@ export const createUI = () => {
   }
   ui.el = el;
 
+  // --- the (i) buttons --------------------------------------------------
+  // Each one shows or hides the element its aria-controls names. Delegated
+  // from the document, so a button added later needs no wiring of its own.
+  document.addEventListener("click", e => {
+    const btn = e.target.closest && e.target.closest("button.info");
+    if (!btn) return;
+    const box = document.getElementById(btn.getAttribute("aria-controls"));
+    if (!box) return;
+    const open = btn.getAttribute("aria-expanded") !== "true";
+    btn.setAttribute("aria-expanded", String(open));
+    box.hidden = !open;
+  });
+
   // --- theme ------------------------------------------------------------
   // "system" removes the attribute rather than setting one, so the media query
   // in app.css goes back to deciding.
   ui.applyTheme = theme => {
     if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
     else delete document.documentElement.dataset.theme;
-    el.theme.value = theme;
+    for (const r of el.theme.querySelectorAll("input")) r.checked = r.value === theme;
   };
+
+  // --- the settings popover ---------------------------------------------
+  // It opens over the page from the header instead of pushing the panels
+  // down, so it costs no height while closed. Escape, Done, or a click
+  // outside it closes it.
+  const settingsBox = $("settings");
+  const closeSettings = () => {
+    if (!settingsBox.open) return;
+    settingsBox.open = false;
+    settingsBox.querySelector("summary").focus();
+  };
+  $("setClose").onclick = closeSettings;
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeSettings(); });
+  document.addEventListener("pointerdown", e => {
+    if (settingsBox.open && !settingsBox.contains(e.target)) settingsBox.open = false;
+  });
 
   // --- panels -----------------------------------------------------------
   // Everything can be switched off. All of it at once is more than anyone
@@ -146,7 +175,7 @@ export const createUI = () => {
   };
 
   // --- reference --------------------------------------------------------
-  ui.fillReference = (ref, langs, want, custom) => {
+  ui.fillReference = (ref, langs, want, custom, customBands) => {
     el.refLang.replaceChildren();
     for (const l of langs) {
       const o = document.createElement("option");
@@ -156,7 +185,7 @@ export const createUI = () => {
     }
     el.refLang.value = langs.includes(want) ? want : (langs[0] || "");
     ui.fillTargets(ref);
-    ui.showSources(ref);
+    ui.showSources(ref, customBands);
     hasSentences = ref.sentences.length > 0;
     ui.sentences = ref.sentences;
     ui.sayAt = 0;
@@ -190,9 +219,16 @@ export const createUI = () => {
     return ref.vowels.find(v => v.lang === parts[0] && v.vowel === parts[1]) || null;
   };
 
-  ui.showSources = ref => {
+  // Two separate statements, each its own sentence: which reference is in use,
+  // and where the pitch bands on screen came from. Bands you set yourself say
+  // so, rather than crediting a source they no longer come from.
+  ui.showSources = (ref, customBands) => {
     el.cite.textContent = ref.sources[el.refLang.value] || "";
-    el.sources.textContent = [ref.name, ref.sources.pitch_bands].filter(Boolean).join("  ");
+    const parts = [];
+    if (ref.name) parts.push("Reference: " + ref.name.replace(/\.$/, "") + ".");
+    if (customBands) parts.push("Pitch bands: your own, set in Settings.");
+    else if (ref.sources.pitch_bands) parts.push("Pitch bands: " + ref.sources.pitch_bands);
+    el.sources.textContent = parts.join(" ");
   };
 
   ui.showSentence = () => {
@@ -205,24 +241,29 @@ export const createUI = () => {
   // the readouts are blanked with the arrays behind them rather than waiting
   // for the next frame to overwrite them.
   ui.blank = () => {
-    el.now.textContent = "-";
+    el.now.textContent = "—";
     el.median.textContent = "";
     cells.forEach(c => { c.style.width = "0%"; });
-    legendEls.forEach(e => { e.textContent = "-"; });
-    formantEls.forEach(e => { e.textContent = "-"; });
-    el.formantNow.textContent = "-";
-    el.brightNum.textContent = "-";
+    legendEls.forEach(e => { e.textContent = "—"; });
+    formantEls.forEach(e => { e.textContent = "—"; });
+    el.formantNow.textContent = "—";
+    el.brightNum.textContent = "—";
+    el.brightPin.classList.remove("off-low", "off-high");
     el.brightPin.style.left = "0%";
     el.brightMed.textContent = "";
-    el.intoneBig.textContent = "-"; el.intoneSess.textContent = "-";
-    el.vtlBig.textContent = "-"; el.vtlSess.textContent = "-";
+    el.intoneBig.textContent = "—"; el.intoneSess.textContent = "—";
+    el.vtlBig.textContent = "—"; el.vtlSess.textContent = "—";
   };
 
   ui.readouts = (hz, s, formant) => {
-    el.now.textContent = hz == null ? "-" : Math.round(hz) + " Hz";
+    el.now.textContent = hz == null ? "—" : Math.round(hz) + " Hz";
     if (s.voiced.length) {
+      // Whole seconds hid anything under half of one, printing "over 0s" beside
+      // a real median. One decimal until there is enough time for it not to
+      // matter.
+      const secs = s.voiced.length / FPS;
       el.median.textContent = "median " + Math.round(median(s.voiced)) + " Hz over " +
-        (s.voiced.length / FPS).toFixed(0) + "s voiced";
+        secs.toFixed(secs < 10 ? 1 : 0) + "s voiced";
       const total = s.voiced.length;
       s.counts.forEach((n, i) => {
         const pct = 100 * n / total;
@@ -233,16 +274,22 @@ export const createUI = () => {
     // The latest frame's formants beside their colours, blank when that frame
     // was unvoiced, and the session medians in the corner.
     formantEls.forEach((e, k) => {
-      e.textContent = formant && formant[k] != null ? Math.round(formant[k]) + " Hz" : "-";
+      e.textContent = formant && formant[k] != null ? Math.round(formant[k]) + " Hz" : "—";
     });
     if (s.formantMed.some(v => v != null)) {
       el.formantNow.textContent = "medians " +
-        s.formantMed.map(v => (v == null ? "-" : Math.round(v))).join(" / ") + " Hz";
+        s.formantMed.map(v => (v == null ? "—" : Math.round(v))).join(" / ") + " Hz";
     }
     if (s.brights.length) {
       const b = s.brights[s.brights.length - 1];
-      el.brightNum.textContent = Math.round(b) + " Hz";
       const f = (b - BRIGHT_SCALE[0]) / (BRIGHT_SCALE[1] - BRIGHT_SCALE[0]);
+      // Off either end, the pin turns into an arrow pointing off the bar and
+      // the number says so. Parked at the edge, 400 Hz looked like 600.
+      const low = f < 0, high = f > 1;
+      el.brightPin.classList.toggle("off-low", low);
+      el.brightPin.classList.toggle("off-high", high);
+      el.brightNum.textContent = Math.round(b) + " Hz" +
+        (low ? ", below the bar" : high ? ", above the bar" : "");
       el.brightPin.style.left = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
       el.brightMed.textContent = "median " + Math.round(median(s.brights)) + " Hz";
     }
@@ -251,7 +298,7 @@ export const createUI = () => {
     // moving now is the trainable thing; the session figure sits beside it.
     if (s.voiced.length > 4) {
       const win = sd(s.f0Recent.map(r => semitones(r[1])));
-      el.intoneBig.textContent = win == null ? "-" : win.toFixed(2);
+      el.intoneBig.textContent = win == null ? "—" : win.toFixed(2);
       el.intoneSess.textContent = "session " + sd(s.voiced.map(semitones)).toFixed(2) + " ST";
     }
     if (s.vtls.length) {

@@ -1,7 +1,7 @@
 // Wiring and the frame loop.
 
 import {
-  FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX, REWIND_S
+  FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX
 } from "./constants.js";
 import {
   decimate, detectPitch, formants, centroid, vtl, median, createVowelTracker
@@ -42,7 +42,7 @@ const s = {
   // pause is not the last ten seconds.
   f0Recent: [], counts: [0, 0, 0, 0, 0]
 };
-let frame = 0, last = 0, raf = 0, lastFormant = null;
+let frame = 0, last = 0, raf = 0, lastFormant = null, lastHz = null;
 
 const resetSession = () => {
   ui.blank();
@@ -50,7 +50,7 @@ const resetSession = () => {
   s.voiced.length = 0; s.brights.length = 0; s.vtls.length = 0; s.f0Recent.length = 0;
   s.f1s.length = 0; s.f2s.length = 0; s.f3s.length = 0; s.formantMed = [null, null, null];
   s.counts.fill(0);
-  lastFormant = null;
+  lastFormant = null; lastHz = null;
   tracker.reset();
 };
 
@@ -73,7 +73,7 @@ const recount = () => {
     const z = zoneOf(hz);
     if (z >= 0) s.counts[z]++;
   }
-  if (s.voiced.length) ui.readouts(null, s, lastFormant);
+  if (s.voiced.length) ui.readouts(lastHz, s, lastFormant);
 };
 
 // --- drawing -------------------------------------------------------------
@@ -95,6 +95,18 @@ const paint = () => {
 };
 
 const repaint = () => { paint(); ui.advise(ui.targetOf(ref), tracker); };
+
+// Text updates every eighth frame, so when a pass stops the last update can be
+// up to seven frames behind the chart: the hint said "sustain a vowel" with
+// the dot sitting on the plane. Stopping anything brings the text level with
+// what is drawn.
+const settle = () => {
+  if (s.voiced.length) {
+    s.formantMed = [median(s.f1s), median(s.f2s), median(s.f3s)];
+    ui.readouts(lastHz, s, lastFormant);
+  }
+  repaint();
+};
 window.addEventListener("resize", paint);
 
 // --- settings ------------------------------------------------------------
@@ -111,8 +123,8 @@ ui.onPanel = (key, on) => {
   repaint();
 };
 
-el.theme.onchange = () => {
-  settings.theme = el.theme.value;
+el.theme.onchange = e => {
+  settings.theme = e.target.value;
   ui.applyTheme(settings.theme);
   persist();
   // The canvases read their ink from the theme, so they redraw with it.
@@ -127,6 +139,7 @@ ui.onBand = (i, band) => {
   settings.bands = next;
   persist();
   el.bandReset.disabled = false;
+  ui.showSources(ref, true);
   recount();
   paint();
 };
@@ -136,6 +149,7 @@ ui.onBandRemove = i => {
   settings.bands = next;
   persist();
   ui.renderBands(bands(), true);
+  ui.showSources(ref, true);
   recount();
   paint();
 };
@@ -149,6 +163,7 @@ el.bandAdd.onclick = () => {
   }]);
   persist();
   ui.renderBands(bands(), true);
+  ui.showSources(ref, true);
   recount();
   paint();
 };
@@ -157,6 +172,7 @@ el.bandReset.onclick = () => {
   settings.bands = null;
   persist();
   ui.renderBands(bands(), false);
+  ui.showSources(ref, false);
   recount();
   paint();
   ui.status("Pitch bands back to the shipped ones.");
@@ -176,7 +192,7 @@ const withShipped = r => ({
 
 const useReference = (next, custom) => {
   ref = next;
-  ui.fillReference(ref, langsOf(ref), el.refLang.value || "pt", custom);
+  ui.fillReference(ref, langsOf(ref), el.refLang.value || "pt", custom, !!settings.bands);
   ui.applyPanels(settings.panels);
   ui.renderBands(bands(), !!settings.bands);
   recount();
@@ -214,7 +230,7 @@ el.refReset.onclick = () => {
   ui.status("Back to the shipped reference.");
 };
 
-el.refLang.onchange = () => { ui.fillTargets(ref); ui.showSources(ref); repaint(); };
+el.refLang.onchange = () => { ui.fillTargets(ref); ui.showSources(ref, !!settings.bands); repaint(); };
 el.target.onchange = repaint;
 el.sayNext.onclick = () => { ui.sayAt++; ui.showSentence(); };
 
@@ -330,6 +346,7 @@ const tick = ts => {
 
   s.trace[s.cursor] = hz;
   s.track[s.cursor] = f;
+  lastHz = hz;
   s.cursor = (s.cursor + 1) % N;
   lastFormant = f;
   if (f) {
@@ -366,7 +383,9 @@ el.start.onclick = async () => {
     // and the loop keeps running if something is being played.
     engine.stopMic();
     el.start.textContent = "Start";
+    el.start.classList.remove("live");
     el.rec.textContent = "Record";
+    el.rec.classList.remove("live");
     el.rec.disabled = true;
     el.cal.disabled = true;
     calUntil = 0;
@@ -374,6 +393,7 @@ el.start.onclick = async () => {
     // Keep last 30s stays live after Stop. The ring still holds what was just
     // said, and realising it was worth keeping a second too late is the whole
     // case for the button.
+    settle();
     ui.status(engine.clip ? "Microphone stopped. " + engine.clip.name + " is still loaded."
                           : "Microphone stopped.");
     return;
@@ -386,12 +406,17 @@ el.start.onclick = async () => {
   }
   resetSession();
   el.start.textContent = "Stop";
+  el.start.classList.add("live");
   el.keep.disabled = !engine.hasTap();
   el.rec.disabled = !engine.canRecord();
   el.cal.disabled = false;
-  if (!engine.canRecord()) el.rec.title = "This browser has no MediaRecorder.";
-  if (!engine.hasTap()) el.keep.title = "This browser gives no tap on the microphone, so there is no rewind buffer.";
-  ui.status("Listening at " + Math.round(engine.workRate()) + " Hz");
+  // A tooltip does not exist on a touch screen, so a missing capability is
+  // said where it will be read.
+  const missing = [];
+  if (!engine.canRecord()) missing.push("this browser cannot record, so Record is off");
+  if (!engine.hasTap()) missing.push("this browser gives no rewind buffer, so Keep last 30s is off");
+  ui.status("Listening at " + Math.round(engine.workRate()) + " Hz" +
+    (missing.length ? ". Note: " + missing.join("; ") + "." : ""));
   runLoop();
 };
 
@@ -399,6 +424,7 @@ el.rec.onclick = async () => {
   if (engine.rec) {
     const take = await engine.stopRecording();
     el.rec.textContent = "Record";
+    el.rec.classList.remove("live");
     ui.showTake(take);
     ui.status(take ? "Take ready. Download it, or record over it." : "That recording produced nothing.");
     if (take) {
@@ -411,6 +437,7 @@ el.rec.onclick = async () => {
   }
   engine.startRecording();
   el.rec.textContent = "Stop recording";
+  el.rec.classList.add("live");
 };
 
 el.keep.onclick = async () => {
@@ -431,6 +458,7 @@ el.play.onclick = async () => {
     engine.stopPlayback();
     el.play.textContent = "Play back";
     if (!engine.listening()) stopLoop();
+    settle();
     ui.status("Playback stopped.");
     return;
   }
@@ -441,6 +469,7 @@ el.play.onclick = async () => {
     secs = await engine.playClip(() => {
       el.play.textContent = "Play back";
       if (!engine.listening()) stopLoop();
+      settle();
       ui.status("Playback finished.");
     });
   } catch (e) {
@@ -510,8 +539,6 @@ window.addEventListener("pagehide", () => { stopLoop(); engine.teardown(); });
 
 // --- start up ------------------------------------------------------------
 if (!window.isSecureContext) el.insecure.hidden = false;
-el.keep.title = "Turn the last " + REWIND_S +
-  " seconds the microphone heard into a take, whether or not Record was on.";
 ui.applyTheme(settings.theme);
 
 try {

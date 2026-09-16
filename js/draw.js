@@ -32,6 +32,10 @@ const fit = (cv, g) => {
 
 const AXIS = 30;
 
+// The order pitch labels claim their place in: the roundest numbers first, so
+// when two collide the one a reader would look for is the one that stays.
+const GRID_PRIORITY = [100, 200, 300, 500, 150, 400, 80, 250, 125, 175];
+
 const yOf = (hz, h) => {
   const a = Math.log(F0_FLOOR), b = Math.log(F0_CEILING);
   return h - (Math.log(hz) - a) / (b - a) * h;
@@ -53,16 +57,43 @@ export const drawTrace = (cv, { trace, cursor, bands }) => {
 
   g.font = "10px system-ui, sans-serif";
   g.textBaseline = "middle";
+  // Every gridline is drawn, but a label only where it has room. On a log
+  // axis 150, 175, 200 and 250 fall a dozen pixels apart, exactly where a
+  // speaking voice lives, so labels are placed in order of how round they are
+  // and one that would crowd a label already placed is left off.
+  const LABEL_GAP = 13;
+  const placed = [];
+  for (const t of GRID_PRIORITY) {
+    const y = Math.min(h - 6, Math.max(6, yOf(t, h)));
+    if (placed.every(p => Math.abs(p.y - y) >= LABEL_GAP)) placed.push({ t, y });
+  }
   for (const t of GRID) {
     const y = Math.round(yOf(t, h)) + 0.5;
     g.globalAlpha = 0.3; g.strokeStyle = T.rule; g.lineWidth = 1;
     g.beginPath(); g.moveTo(AXIS, y); g.lineTo(w, y); g.stroke();
-    g.globalAlpha = 0.65; g.fillStyle = T.ink;
-    // Kept off the edges: the top gridline sits at y=0, and a label centred on
-    // it loses its upper half to the canvas boundary.
-    g.fillText(String(t), 2, Math.min(h - 6, Math.max(6, y)));
+  }
+  g.globalAlpha = 0.65; g.fillStyle = T.ink;
+  // Kept off the edges: the top gridline sits at y=0, and a label centred on
+  // it loses its upper half to the canvas boundary.
+  for (const p of placed) g.fillText(String(p.t), 2, p.y);
+  g.globalAlpha = 1;
+
+  // Each band names itself, the way the per-recording charts do. Top left,
+  // because new sound enters at the right and a label there would sit under
+  // the newest point of the line. A band too thin to hold its label gets it
+  // just above instead.
+  g.font = "11px system-ui, sans-serif";
+  g.textAlign = "left";
+  for (const b of bands) {
+    const y1 = yOf(Math.min(b.high, F0_CEILING), h);
+    const y2 = yOf(Math.max(b.low, F0_FLOOR), h);
+    const text = (b.name ? b.name + "  " : "") + b.low + "-" + b.high + " Hz";
+    g.globalAlpha = 0.8; g.fillStyle = T.ink;
+    if (y2 - y1 >= 16) { g.textBaseline = "top"; g.fillText(text, AXIS + 6, y1 + 3); }
+    else { g.textBaseline = "bottom"; g.fillText(text, AXIS + 6, Math.max(12, y1 - 2)); }
   }
   g.globalAlpha = 1;
+  g.textBaseline = "middle";
 
   // Each voiced run is its own stroke, so an unvoiced gap reads as a gap
   // instead of a line joining two sounds that were never continuous.
@@ -129,7 +160,8 @@ export const drawPlane = (cv, { rows, target, trail, smooth, steady }) => {
   if (!w || !h) return;
   g.clearRect(0, 0, w, h);
   const T = tokens();
-  const L = 34, B = 20, TOP = 6, R = 8;
+  // Room on the left and bottom for axis titles as well as tick numbers.
+  const L = 50, B = 36, TOP = 6, R = 8;
 
   // Both axes run high to low, the phonetic convention, because it makes the
   // plane a picture of the mouth: up is a higher tongue, left is a fronter one.
@@ -141,10 +173,23 @@ export const drawPlane = (cv, { rows, target, trail, smooth, steady }) => {
   g.strokeStyle = T.rule; g.lineWidth = 1; g.globalAlpha = 0.3;
   g.strokeRect(L, TOP, w - L - R, h - TOP - B);
   g.globalAlpha = 0.55; g.fillStyle = T.ink;
-  for (const f1 of [200, 400, 600, 800, 1000]) g.fillText(String(f1), 2, Y(f1));
+  g.textAlign = "right";
+  for (const f1 of [200, 400, 600, 800, 1000]) g.fillText(String(f1), L - 4, Y(f1));
   g.textAlign = "center";
-  for (const f2 of [3000, 2000, 1000]) g.fillText(String(f2), X(f2), h - 8);
+  for (const f2 of [3000, 2000, 1000]) g.fillText(String(f2), X(f2), h - B + 10);
+
+  // Axis titles. Without them the plane is two bare scales of numbers, and
+  // what up and left mean was only written in the footer, far from the chart.
+  g.globalAlpha = 0.8;
+  g.font = "11px system-ui, sans-serif";
+  g.fillText("F2 in Hz: tongue front to back", L + (w - L - R) / 2, h - 8);
+  g.save();
+  g.translate(10, TOP + (h - TOP - B) / 2);
+  g.rotate(-Math.PI / 2);
+  g.fillText("F1 in Hz: tongue high to low", 0, 0);
+  g.restore();
   g.textAlign = "left";
+  g.font = "10px system-ui, sans-serif";
   g.globalAlpha = 1;
 
   // The boundary the markers delimit, computed from the points rather than
@@ -179,9 +224,13 @@ export const drawPlane = (cv, { rows, target, trail, smooth, steady }) => {
         g.beginPath(); g.arc(x, y, 22, 0, 2 * Math.PI); g.stroke();
         g.setLineDash([]);
       }
+      // Larger and firmer than before: at 10px and half opacity the vowel
+      // letters were barely legible on a phone.
       if (!target || isT) {
-        g.fillStyle = T.ink; g.globalAlpha = isT ? 0.9 : 0.5;
-        g.fillText(v.vowel, x + 8, y - 7);
+        g.font = "600 12px system-ui, sans-serif";
+        g.fillStyle = T.ink; g.globalAlpha = isT ? 1 : 0.75;
+        g.fillText(v.vowel, x + 8, y - 8);
+        g.font = "10px system-ui, sans-serif";
       }
       g.globalAlpha = 1;
     }
