@@ -10,8 +10,9 @@ Carregue o seu quando quem acompanha você na fonoaudiologia trabalha com outras
 {
   "name": "Como chamar este conjunto",
   "pitch_bands": [
-    { "name": "Masculino típico", "low": 90, "high": 155, "color": "rgba(106, 159, 181, 0.14)" },
-    { "name": "Feminino típico", "low": 165, "high": 255, "color": "rgba(184, 84, 80, 0.13)" }
+    { "name": "Masculino", "low": 90, "high": 155, "color": "rgba(106, 159, 181, 0.14)" },
+    { "name": "Andrógino", "low": 145, "high": 175, "color": "rgba(150, 150, 150, 0.14)", "shade": false },
+    { "name": "Feminino", "low": 165, "high": 255, "color": "rgba(184, 84, 80, 0.13)" }
   ],
   "vowel_reference": [
     { "lang": "pt", "vowel": "i", "word": "i", "m_f1": 285, "m_f2": 2198, "w_f1": 307, "w_f2": 2676 }
@@ -28,7 +29,7 @@ As chaves continuam em inglês, porque são o que a página lê.
 
 | Chave | O que faz |
 |---|---|
-| `pitch_bands` | As faixas sombreadas no traçado e as cinco zonas que a barra de proporção conta. **Duas faixas, lidas como ilhas, dão cinco zonas**: abaixo da inferior, a inferior, o intervalo entre elas, a superior, acima da superior. Mais ou menos de duas também são desenhadas, e a barra de proporção segue o que receber. |
+| `pitch_bands` | As faixas com que o painel de tom compara o seu tempo com voz, um medidor para cada. Em Configurações dá para acrescentar um medidor para o tempo fora de todas. **Cada faixa é contada por conta própria**, então as faixas podem se sobrepor e as proporções podem somar mais de 100%. Cada uma tem `name`, `low` e `high` em Hz, e uma `color`, desenhada translúcida. `"shade": false` tira a faixa do traçado sem deixar de contá-la; se omitido, ela é sombreada. Qualquer número de faixas funciona. |
 | `vowel_reference` | Os losangos no plano e as opções do seletor de Alvo. `m_` e `w_` são os dois conjuntos de referência (homens e mulheres), sempre desenhados juntos. Em Hz. |
 | `languages` | Como o seletor de Referência chama cada `lang`, e de onde vem a linha de citação. Um `lang` sem entrada aqui mostra o próprio código. |
 | `sentences` | Frases para ler enquanto observa. Aparecem uma de cada vez embaixo do traçado, e a página não vem com nenhuma. |
@@ -40,4 +41,4 @@ Um arquivo que não é JSON, ou cujas linhas de `vowel_reference` não têm `m_f
 
 ## O que vem incluído
 
-Faixas de tom de 80-140 e 175-275 Hz, as faixas típicas que os aplicativos de treino de voz desenham, que são uma referência prática e não uma norma publicada. Vogais de Hillenbrand et al. (1995) para o inglês americano, com médias sobre as medições publicadas do estudo, e de Escudero et al. (2009), Tabela I, para o português brasileiro. Todas as citações estão no `reference.json`, em `sources`, e as ressalvas de cada estudo estão no README.
+Cinco faixas de tom: muito grave 60-80, masculino 80-140, andrógino 140-175, feminino 175-275 e muito agudo 275-500 Hz, com só a masculina e a feminina sombreadas no traçado. As faixas masculina e feminina são as típicas que os aplicativos de treino de voz desenham, uma referência prática e não uma norma publicada, e as outras três nomeiam o que fica entre e além delas. Como vêm, não se sobrepõem, então as proporções somam 100%. Vogais de Hillenbrand et al. (1995) para o inglês americano, com médias sobre as medições publicadas do estudo, e de Escudero et al. (2009), Tabela I, para o português brasileiro. Todas as citações estão no `reference.json`, em `sources`, e as ressalvas de cada estudo estão no README.

@@ -1,12 +1,12 @@
 // Wiring and the frame loop.
 
 import {
-  FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX
+  FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX, F0_CEILING
 } from "./constants.js";
 import {
   decimate, detectPitch, formants, centroid, vtl, median, createVowelTracker
 } from "./dsp.js";
-import { loadShipped, parseReference, zoneEdges, langsOf } from "./reference.js";
+import { loadShipped, parseReference, inBand, langsOf } from "./reference.js";
 import { drawTrace, drawFormants, drawPlane } from "./draw.js";
 import { createEngine } from "./audio.js";
 import { createUI } from "./ui.js";
@@ -22,7 +22,6 @@ const EMPTY_REF = { name: "", bands: [], vowels: [], languages: {}, sentences: [
 let shipped = EMPTY_REF;
 let ref = EMPTY_REF;
 let settings = store.load();
-let edges = [];
 let rmsGate = RMS_GATE;
 
 // Every status line goes through here, so it can be said again in the other
@@ -56,7 +55,10 @@ const s = {
   // Timestamped, and trimmed by the clock rather than by a count of frames. A
   // count would mean "the last ten seconds of voiced sound", which after a
   // pause is not the last ten seconds.
-  f0Recent: [], counts: [0, 0, 0, 0, 0]
+  f0Recent: [],
+  // Voiced frames inside each band, and inside none. Bands can overlap, so
+  // the counts can add up to more than the frames.
+  counts: [], outside: 0
 };
 let frame = 0, last = 0, raf = 0, lastFormant = null, lastHz = null;
 
@@ -65,30 +67,28 @@ const resetSession = () => {
   s.trace.fill(null); s.track.fill(null); s.cursor = 0;
   s.voiced.length = 0; s.brights.length = 0; s.vtls.length = 0; s.f0Recent.length = 0;
   s.f1s.length = 0; s.f2s.length = 0; s.f3s.length = 0; s.formantMed = [null, null, null];
-  s.counts.fill(0);
+  s.counts.fill(0); s.outside = 0;
   lastFormant = null; lastHz = null;
   tracker.reset();
 };
 
-// Which zone a pitch falls in, against whatever the bands are now.
-const zoneOf = hz => {
-  for (let i = 0; i < edges.length; i++) {
-    const a = edges[i][0], b = edges[i][1];
-    if ((a == null || hz >= a) && (b == null || hz < b)) return i;
-  }
-  return -1;
+// One voiced frame, counted into every band it falls in.
+const countFrame = hz => {
+  let any = false;
+  bands().forEach((b, i) => {
+    if (inBand(hz, b, F0_CEILING)) { s.counts[i]++; any = true; }
+  });
+  if (!any) s.outside++;
 };
 
-// Changing a band mid-session would leave the share bar counting half the
-// pass against the old edges and half against the new. Every voiced frame is
-// still held, so it is recounted exactly instead.
+// Changing a band mid-session would leave the shares counting half the pass
+// against the old edges and half against the new. Every voiced frame is still
+// held, so it is recounted exactly instead.
 const recount = () => {
-  edges = zoneEdges(bands().slice().sort((a, b) => a.low - b.low));
-  s.counts.fill(0);
-  for (const hz of s.voiced) {
-    const z = zoneOf(hz);
-    if (z >= 0) s.counts[z]++;
-  }
+  s.counts = bands().map(() => 0);
+  s.outside = 0;
+  for (const hz of s.voiced) countFrame(hz);
+  ui.renderShare(bands(), settings.showOutside);
   if (s.voiced.length) ui.readouts(lastHz, s, lastFormant);
 };
 
@@ -191,13 +191,19 @@ el.bandAdd.onclick = () => {
   const top = cur.length ? Math.max(...cur.map(b => b.high)) : 100;
   settings.bands = cur.map(b => ({ ...b })).concat([{
     name: "", low: Math.min(560, top + 10), high: Math.min(600, top + 60),
-    color: store.hexToBand("#969696")
+    color: store.hexToBand("#969696"), shade: true, shade: true
   }]);
   persist();
   ui.renderBands(bands(), true);
   ui.showSources(ref, true);
   recount();
   paint();
+};
+
+el.showOutside.onchange = () => {
+  settings.showOutside = el.showOutside.checked;
+  persist();
+  recount();
 };
 
 el.bandReset.onclick = () => {
@@ -397,8 +403,7 @@ const tick = ts => {
     s.voiced.push(hz);
     s.f0Recent.push([ts, hz]);
     while (s.f0Recent.length && ts - s.f0Recent[0][0] > WINDOW_S * 1000) s.f0Recent.shift();
-    const z = zoneOf(hz);
-    if (z >= 0) s.counts[z]++;
+    countFrame(hz);
   }
 
   paint();

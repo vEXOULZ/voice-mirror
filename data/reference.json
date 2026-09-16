@@ -2,13 +2,16 @@
   "name": "Shipped reference",
   "note": "The vowels are averages from published studies of other people's voices; the pitch bands are a practical reference, not a published norm. None of it is a target: where a band sits is a fact, which of them is a goal is between you and your clinician. Replace any of it in Settings.",
   "sources": {
-    "pitch_bands": "Typical male and female speaking ranges as drawn by the voice-training apps in common clinical use. Not taken from a paper: a practical reference for placing a reading at a glance, not a published norm. Set your own in Settings.",
+    "pitch_bands": "Typical male and female speaking ranges as drawn by the voice-training apps in common clinical use, with the gap between them and the two ends named as bands of their own. Not taken from a paper: a practical reference for placing a reading at a glance, not a published norm. Set your own in Settings.",
     "en": "Hillenbrand, J. M., Getty, L. A., Clark, M. J. and Wheeler, K. (1995), Acoustic characteristics of American English vowels, JASA 97, 3099-3111. Means over the steady-state measurements in the study's published data file, 45 men and 48 women, h-V-d words read in isolation. A token whose formant the study marks unmeasurable is left out of its own average.",
     "pt": "Escudero, P., Boersma, P., Rauber, A. S. and Bion, R. A. H. (2009), A cross-dialect acoustic description of vowels: Brazilian and European Portuguese, JASA 126, 1379-1393, Table I, Brazilian Portuguese. Geometric averages over ten women and ten men, one stressed vowel inside a nonce word in a carrier sentence."
   },
   "pitch_bands": [
-    { "name": "Typical male", "low": 80, "high": 140, "color": "rgba(106, 159, 181, 0.14)" },
-    { "name": "Typical female", "low": 175, "high": 275, "color": "rgba(184, 84, 80, 0.13)" }
+    { "name": "Very low", "low": 60, "high": 80, "color": "rgba(38, 70, 132, 0.14)", "shade": false },
+    { "name": "Male", "low": 80, "high": 140, "color": "rgba(106, 159, 181, 0.14)" },
+    { "name": "Androgynous", "low": 140, "high": 175, "color": "rgba(150, 150, 150, 0.14)", "shade": false },
+    { "name": "Female", "low": 175, "high": 275, "color": "rgba(184, 84, 80, 0.13)" },
+    { "name": "Very high", "low": 275, "high": 500, "color": "rgba(200, 40, 160, 0.14)", "shade": false }
   ],
   "vowel_reference": [
     { "lang": "en", "vowel": "i",  "word": "heed",   "m_f1": 343, "m_f2": 2323, "w_f1": 437, "w_f2": 2761 },

@@ -26,20 +26,19 @@ const cleanVowels = rows => {
   return { rows: out, bad };
 };
 
+// A band may overlap another: each one counts the voiced time inside it on
+// its own, so the shares can add up to more than 100. `shade: false` keeps a
+// band off the trace while it still counts, for the wide ones at either end
+// that would otherwise wash over the whole chart.
 const cleanBands = rows => (rows || [])
   .map(b => ({ name: String(b.name ?? ""), low: Number(b.low), high: Number(b.high),
-               color: String(b.color ?? "rgba(150,150,150,.15)") }))
+               color: String(b.color ?? "rgba(150,150,150,.15)"), shade: b.shade !== false }))
   .filter(b => isFinite(b.low) && isFinite(b.high) && b.high > b.low)
   .sort((a, b) => a.low - b.low);
 
-// Two bands read as islands give five zones: below the lower, the lower, the
-// gap, the upper, above the upper. They partition, which is why they sum to
-// 100 where overlapping ranges would not.
-export const zoneEdges = bands => {
-  if (!bands.length) return [];
-  const lo = bands[0], hi = bands[bands.length - 1];
-  return [[null, lo.low], [lo.low, lo.high], [lo.high, hi.low], [hi.low, hi.high], [hi.high, null]];
-};
+// Half open, so a pitch sitting exactly on a shared edge counts once, except
+// at the top of the detectable range, where nothing lies above to take it.
+export const inBand = (hz, b, ceiling) => hz >= b.low && (hz < b.high || (hz === b.high && b.high >= ceiling));
 
 // Throws with a readable message rather than returning something half usable:
 // the caller keeps whatever it already had and prints what went wrong.

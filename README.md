@@ -10,7 +10,7 @@ A browser page that shows you your pitch and your vowel while you are making the
 
 ## What it shows
 
-- **Pitch**, as a trace over the last ten seconds, against reference bands you can set yourself, with the share of voiced time spent in each of five zones.
+- **Pitch**, as a trace over the last ten seconds, against reference bands you can set yourself, with the share of voiced time spent inside each band. Bands can overlap, so the shares can add up to more than 100%.
 - **Formants**, F1, F2 and F3 over the same ten seconds, per frame, in the colours the offline tool's own charts use. Gaps are unvoiced.
 - **Brightness**, the spectral centroid: one number for how far forward the sound is placed. It is what the resonance drills move and what a pitch trace says nothing about.
 - **Intonation variability**, the standard deviation of f0 in semitones. A flat delivery reads as masculine whatever its height.
@@ -55,13 +55,13 @@ The lossless capture is capped at ten minutes, about 58 MB. Past the cap it stop
 
 The page ships with the reference below, and **Settings** is where you replace any of it:
 
-- **Pitch bands** are edited directly: name, low, high and colour per band, add or remove rows. The trace and the share bar follow as you type, and the whole session is recounted against the new edges rather than half of it being counted against the old ones.
+- **Pitch bands** are edited directly: name, low, high and colour per band, add or remove rows. Bands may overlap, and a band can be kept off the trace while still counted. The trace and the share meters follow as you type, and the whole session is recounted against the new edges rather than half of it being counted against the old ones.
 - **Reference vowels**, the diamonds and the Target list, come from a JSON file. Write one in the format in [`data/reference.md`](data/reference.md) and press **Load reference**, or drop the file anywhere on the page. It is read in the browser, saved there so it is still loaded next time, and never uploaded. A file can carry its own pitch bands and practice sentences too.
 - **Export settings** writes all of it, a loaded reference included, to one JSON file. **Import settings** on another machine or another browser puts it back. That file is also your backup: clearing site data clears settings, and nothing else holds a copy.
 
 | What | Where it comes from |
 |---|---|
-| Pitch bands | 80-140 Hz and 175-275 Hz, the typical male and female speaking ranges the voice-training apps in common clinical use draw. **Not from a paper**, and not a norm: a practical reference for placing a reading at a glance. Set your own in Settings. |
+| Pitch bands | Very low 60-80, male 80-140, androgynous 140-175, female 175-275 and very high 275-500 Hz. The male and female ranges are the typical speaking ranges the voice-training apps in common clinical use draw; the other three name what lies between and beyond them. **Not from a paper**, and not a norm: a practical reference for placing a reading at a glance. Set your own in Settings. |
 | American English vowels | Hillenbrand, Getty, Clark and Wheeler (1995), *JASA* 97, 3099-3111. Means over that study's published steady-state measurements, 45 men and 48 women, h-V-d words read in isolation. |
 | Brazilian Portuguese vowels | Escudero, Boersma, Rauber and Bion (2009), *JASA* 126, 1379-1393, Table I. Geometric averages over ten women and ten men, one stressed vowel in a carrier sentence. |
 
@@ -93,7 +93,7 @@ Every constant carries the measurement that set it, in [`js/constants.js`](js/co
 node --test test/dsp.test.js
 ```
 
-The pure half is in [`js/dsp.js`](js/dsp.js) and needs no browser, no microphone and no recording. The signals are synthesised from stated pitch and formant values, so a failure says which stage broke. Covered: pitch across the search range and the octave trap, unvoiced rejection for a quiet room and for loud noise, formants recovered from known poles, the wide-F1 case, F2 selection against a narrow high pole, Bark, hull area, vocal tract length, the nucleus and glide rules, and the WAV header byte by byte. On the settings side: a bad field falls back on its own without taking the rest with it, export and import round-trip, band colours survive the colour input, a reference file handed to Import is named as one, and two bands partition pitch into five zones.
+The pure half is in [`js/dsp.js`](js/dsp.js) and needs no browser, no microphone and no recording. The signals are synthesised from stated pitch and formant values, so a failure says which stage broke. Covered: pitch across the search range and the octave trap, unvoiced rejection for a quiet room and for loud noise, formants recovered from known poles, the wide-F1 case, F2 selection against a narrow high pole, Bark, hull area, vocal tract length, the nucleus and glide rules, and the WAV header byte by byte. On the settings side: a bad field falls back on its own without taking the rest with it, export and import round-trip, band colours survive the colour input, a reference file handed to Import is named as one, and each band counts a pitch on its own, overlapping or not.
 
 ## Browsers
 

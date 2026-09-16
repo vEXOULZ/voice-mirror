@@ -10,8 +10,9 @@ Load your own when your clinician works to different bands, when you want target
 {
   "name": "What to call this set",
   "pitch_bands": [
-    { "name": "Typical male", "low": 90, "high": 155, "color": "rgba(106, 159, 181, 0.14)" },
-    { "name": "Typical female", "low": 165, "high": 255, "color": "rgba(184, 84, 80, 0.13)" }
+    { "name": "Male", "low": 90, "high": 155, "color": "rgba(106, 159, 181, 0.14)" },
+    { "name": "Androgynous", "low": 145, "high": 175, "color": "rgba(150, 150, 150, 0.14)", "shade": false },
+    { "name": "Female", "low": 165, "high": 255, "color": "rgba(184, 84, 80, 0.13)" }
   ],
   "vowel_reference": [
     { "lang": "pt", "vowel": "i", "word": "i", "m_f1": 285, "m_f2": 2198, "w_f1": 307, "w_f2": 2676 }
@@ -26,7 +27,7 @@ A file needs at least one of `pitch_bands` and `vowel_reference`, and everything
 
 | Key | What it does |
 |---|---|
-| `pitch_bands` | The shaded bands on the trace, and the five zones the share bar counts. **Two bands, read as islands, give five zones**: below the lower, the lower, the gap between them, the upper, above the upper. More or fewer than two still draws, and the share bar follows whatever it is given. |
+| `pitch_bands` | The bands the pitch panel counts your voiced time against, one meter each. Settings can add a meter for time inside none of them. **Each band is counted on its own**, so bands may overlap and their shares can add up to more than 100%. Each has a `name`, `low` and `high` in Hz, and a `color`, drawn translucent. `"shade": false` keeps a band off the trace while it is still counted; it is on when left out. Any number of bands works. |
 | `vowel_reference` | The diamonds on the plane and the entries in the Target picker. `m_` and `w_` are the two reference sets, both always drawn. Hz. |
 | `languages` | What the Reference picker calls each `lang`, and where the citation line comes from. A `lang` with no entry here shows its own code. |
 | `sentences` | Lines to read while watching. Shown one at a time under the trace, and the page ships with none. |
@@ -38,4 +39,4 @@ A file that is not JSON, or whose `vowel_reference` rows are missing `m_f1`, `m_
 
 ## What ships
 
-Pitch bands of 80-140 and 175-275 Hz, the typical ranges voice-training apps draw, which are a practical reference rather than a published norm. Vowels from Hillenbrand et al. (1995) for American English, averaged over that study's published measurements, and from Escudero et al. (2009) Table I for Brazilian Portuguese. Every citation is in `reference.json` under `sources`, and the per-study caveats are in the README.
+Five pitch bands: very low 60-80, male 80-140, androgynous 140-175, female 175-275 and very high 275-500 Hz, with only male and female shaded on the trace. The male and female ranges are the typical ones voice-training apps draw, a practical reference rather than a published norm, and the other three name what lies between and beyond them. Shipped, they do not overlap, so their shares add up to 100%. Vowels from Hillenbrand et al. (1995) for American English, averaged over that study's published measurements, and from Escudero et al. (2009) Table I for Brazilian Portuguese. Every citation is in `reference.json` under `sources`, and the per-study caveats are in the README.

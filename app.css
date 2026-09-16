@@ -220,11 +220,22 @@ canvas { width: 100%; display: block; }
 #plane { height: 280px; }
 #formants { height: 150px; margin-top: 4px; }
 
-.share {
-  display: flex; height: 12px; margin-top: 12px;
-  border-radius: 6px; overflow: hidden; background: var(--surface-2);
+/* One meter per band. A grid rather than a stacked bar, because overlapping
+   bands are not parts of one whole. */
+.share-list {
+  display: grid; gap: 10px 20px; margin-top: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
-.share > div { width: 0; transition: width .2s; }
+.share-label {
+  display: flex; align-items: baseline; gap: 6px;
+  font-size: .8rem; color: var(--ink-dim); margin-bottom: 4px;
+}
+.share-label i { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 3px; align-self: center; }
+.share-label span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-label b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.share-track { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.share-fill { width: 0; height: 100%; border-radius: 3px; transition: width .2s; }
+.share-item.outside .share-label { font-style: italic; }
 .legend {
   display: flex; gap: 6px 16px; flex-wrap: wrap;
   margin-top: 8px; font-size: .8rem; color: var(--ink-dim);
@@ -386,6 +397,10 @@ button.info[aria-expanded="true"] { color: var(--accent-ink); background: var(--
 }
 .band .drop { padding: 3px 9px; }
 .band span { color: var(--ink-faint); font-size: .8em; }
+.check { gap: .45em; margin: 2px 0 10px; font-size: .88rem; color: var(--ink-dim); cursor: pointer; }
+.check input { accent-color: var(--accent); }
+.band-shade { gap: .3em; font-size: .82em; color: var(--ink-dim); cursor: pointer; }
+.band-shade input { accent-color: var(--accent); }
 
 /* The reference page. */
 .doc main > .card > h2, .prose h2 { font-size: 1.15rem; margin: 0 0 var(--space-3); }

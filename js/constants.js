@@ -118,14 +118,6 @@ export const BRIGHT_LO = 300, BRIGHT_HI = 5000;   // the band it is measured ove
 export const BRIGHT_SCALE = [600, 2600];          // the ends of the bar, in Hz
 
 // --- what is drawn -------------------------------------------------------
-// The five zones a pitch track is partitioned into. Two reference bands read
-// as islands give five: below the lower, the lower, the gap, the upper, above
-// the upper. They partition, which is why they sum to 100.
-export const ZONES = [
-  ["Very low", "rgb(38,70,132)"], ["Male", "rgb(139,194,232)"],
-  ["Androgynous", "rgb(150,150,150)"], ["Female", "rgb(240,160,195)"],
-  ["Very high", "rgb(200,40,160)"]
-];
 export const GRID = [80, 100, 125, 150, 175, 200, 250, 300, 400, 500];
 
 // The formant track, on the same axis and in the same colours the offline

@@ -34,6 +34,9 @@ export const defaults = () => ({
   // null means "whatever the reference file says", which is the shipped case.
   // An array here is yours and wins over it.
   bands: null,
+  // The meter for voiced time inside no band. Off until asked for: with the
+  // shipped bands covering the whole range it would only ever read 0%.
+  showOutside: false,
   reference: null
 });
 
@@ -46,6 +49,7 @@ export const normalise = raw => {
 
   if (["system", "light", "dark"].includes(raw.theme)) out.theme = raw.theme;
   if (["en", "pt"].includes(raw.lang)) out.lang = raw.lang;
+  if (typeof raw.showOutside === "boolean") out.showOutside = raw.showOutside;
 
   if (raw.panels && typeof raw.panels === "object") {
     for (const [k] of PANELS) if (k in raw.panels) out.panels[k] = !!raw.panels[k];
@@ -56,7 +60,8 @@ export const normalise = raw => {
       .map(b => ({
         name: String(b && b.name != null ? b.name : ""),
         low: Number(b && b.low), high: Number(b && b.high),
-        color: String(b && b.color ? b.color : "rgba(150,150,150,0.14)")
+        color: String(b && b.color ? b.color : "rgba(150,150,150,0.14)"),
+        shade: !(b && b.shade === false)
       }))
       .filter(b => isFinite(b.low) && isFinite(b.high) && b.high > b.low)
       .sort((a, b) => a.low - b.low);
@@ -108,6 +113,13 @@ export const bandToHex = colour => {
   if (m) return "#" + hex(m[1]) + hex(m[2]) + hex(m[3]);
   const h = String(colour).match(/^#([0-9a-f]{6})$/i);
   return h ? "#" + h[1] : "#969696";
+};
+
+// The same colour at full strength, for the share meters, where a wash would
+// be too faint to read.
+export const opaque = colour => {
+  const m = String(colour).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+  return m ? "rgb(" + m[1] + ", " + m[2] + ", " + m[3] + ")" : colour;
 };
 
 // --- moving them between machines ---------------------------------------

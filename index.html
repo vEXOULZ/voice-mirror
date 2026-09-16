@@ -74,12 +74,15 @@
                     aria-label="About pitch bands" data-i18n-attr="aria-label:h.bandsAbout">i</button>
           </div>
           <div id="info-bands" class="info-text" hidden data-i18n="h.bandsInfo">
-            <p>The shaded ranges on the pitch trace, and the five zones the share bar counts: below the
-              lower band, the lower band, the gap between, the upper band, and above the upper.</p>
+            <p>The ranges the pitch panel counts your voiced time against, each on its own. Bands may
+              overlap, so their shares can add up to more than 100%. Untick Shade to keep a band off the
+              trace while it still counts, and tick the box below to also see the time inside no band.</p>
             <p>They are a reference, not a target. Use your clinician's if they differ. Changes apply as
               you type, and the whole session is recounted against the new bands.</p>
           </div>
           <div id="bands" class="bands"></div>
+          <label class="check"><input type="checkbox" id="showOutside">
+            <span data-i18n="h.showOutside">Show time outside every band</span></label>
           <div class="bar">
             <button id="bandAdd" class="ghost" data-i18n="h.bandAdd">Add a band</button>
             <button id="bandReset" class="ghost" data-i18n="h.bandReset">Back to the shipped bands</button>
@@ -203,9 +206,10 @@
       <p>The line is your pitch over the last ten seconds, on a scale that gives each octave the
         same height. Gaps are silence, or a consonant with no voice in it: the page draws a gap
         rather than guessing.</p>
-      <p>The shaded areas are the reference bands you can change in Settings. The bar underneath
-        shows how your voiced time this session splits across five zones: below the lower band,
-        inside it, between the two, inside the upper band, and above it.</p>
+      <p>The shaded areas are reference bands, which you can change in Settings. The meters
+        underneath show how much of your voiced time this session fell inside each band. Bands can
+        overlap, so the shares can add up to more than 100%. Settings can add a meter for the time
+        inside none of them.</p>
     </div>
     <div class="readout">
       <span id="now" class="big">—</span>
@@ -213,8 +217,7 @@
     </div>
     <canvas id="trace" height="190" role="img" data-i18n-attr="aria-label:h.traceLabel"
             aria-label="Your pitch over the last ten seconds, against the reference bands. The current value and median are shown in text above."></canvas>
-    <div id="share" class="share" aria-hidden="true"></div>
-    <div id="legend" class="legend"></div>
+    <div id="share" class="share-list"></div>
   </section>
 
   <section class="panel" data-panel="formants" aria-labelledby="h-formants">

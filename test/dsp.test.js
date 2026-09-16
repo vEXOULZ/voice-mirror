@@ -15,7 +15,7 @@ import {
 import { encodeWav, floatToInt16, int16ToFloat } from "../js/wav.js";
 import { RMS_GATE, WORK_RATE, F0_FLOOR, F0_CEILING } from "../js/constants.js";
 import { normalise, defaults, fromFile, toFile, hexToBand, bandToHex, PANELS } from "../js/settings.js";
-import { parseReference, zoneEdges } from "../js/reference.js";
+import { parseReference, inBand } from "../js/reference.js";
 
 const RATE = WORK_RATE;   // the working rate everything downstream sees
 const LEN = 1024;         // one analysis window, 4096 decimated by four
@@ -347,6 +347,12 @@ test("settings with nothing usable are the defaults", () => {
   assert.equal(normalise({ bands: [] }).bands, null, "an empty band list must mean 'use the reference's'");
 });
 
+test("the outside-every-band meter is off unless turned on", () => {
+  assert.equal(defaults().showOutside, false);
+  assert.equal(normalise({ showOutside: true }).showOutside, true);
+  assert.equal(normalise({ showOutside: "yes" }).showOutside, false, "only a real boolean turns it on");
+});
+
 test("every panel has a default", () => {
   const d = defaults();
   for (const [k] of PANELS) assert.equal(typeof d.panels[k], "boolean", k);
@@ -391,8 +397,18 @@ test("a reference with nothing drawable is refused, not drawn empty", () => {
   assert.throws(() => parseReference("{nope"), /not JSON/);
 });
 
-test("two bands partition pitch into five zones", () => {
-  const e = zoneEdges([{ low: 80, high: 140 }, { low: 175, high: 275 }]);
-  assert.deepEqual(e, [[null, 80], [80, 140], [140, 175], [175, 275], [275, null]]);
-  assert.deepEqual(zoneEdges([]), []);
+test("each band counts on its own, so overlapping bands both take a pitch", () => {
+  const male = { low: 80, high: 180 }, female = { low: 165, high: 255 };
+  assert.ok(inBand(170, male, F0_CEILING) && inBand(170, female, F0_CEILING), "170 is in both");
+  assert.ok(inBand(80, male, F0_CEILING), "the low edge is inside");
+  assert.ok(!inBand(180, male, F0_CEILING), "the high edge belongs to the band above");
+  assert.ok(inBand(F0_CEILING, { low: 275, high: F0_CEILING }, F0_CEILING), "the top of the range is kept");
+});
+
+test("a band's shade flag survives settings, and is on unless turned off", () => {
+  const s = normalise({ bands: [{ low: 60, high: 80, shade: false }, { low: 80, high: 140 }] });
+  assert.equal(s.bands[0].shade, false);
+  assert.equal(s.bands[1].shade, true);
+  const r = parseReference(JSON.stringify({ pitch_bands: [{ low: 60, high: 80, shade: false }] }));
+  assert.equal(r.bands[0].shade, false);
 });

@@ -5,11 +5,11 @@
 // most of what that cost is simply gone.
 
 import {
-  ZONES, BRIGHT_SCALE, FPS, TOL, CAL_SECONDS, TRACK_TONE
+  BRIGHT_SCALE, FPS, TOL, CAL_SECONDS, TRACK_TONE
 } from "./constants.js";
 import { t, td, applyStatic } from "./i18n.js";
 import { bark, median, sd, semitones } from "./dsp.js";
-import { PANELS, hexToBand, bandToHex } from "./settings.js";
+import { PANELS, hexToBand, bandToHex, opaque } from "./settings.js";
 
 export const $ = id => document.getElementById(id);
 
@@ -18,12 +18,12 @@ export const createUI = () => {
   const el = {};
   for (const id of ["start", "rec", "keep", "play", "cal", "reset", "status", "format",
                     "download", "take", "pick", "pickBtn", "clip", "pickRef", "pickRefBtn",
-                    "refReset", "refName", "panels", "now", "median", "trace", "share", "legend",
+                    "refReset", "refName", "panels", "now", "median", "trace", "share",
                     "formants", "formantNow", "formantKey",
                     "brightNum", "brightBar", "brightPin", "brightLo", "brightMed", "brightHi",
                     "intoneBig", "intoneSess", "vtlBig", "vtlSess", "refLang", "target",
                     "plane", "hint", "cite", "sayNext", "sayLine", "sources", "theme", "lang",
-                    "insecure", "bands", "bandAdd", "bandReset", "setExport", "setImport",
+                    "insecure", "bands", "bandAdd", "bandReset", "showOutside", "setExport", "setImport",
                     "setImportFile", "setReset"]) {
     el[id] = $(id);
   }
@@ -120,6 +120,12 @@ export const createUI = () => {
       const colour = document.createElement("input");
       colour.type = "color"; colour.value = bandToHex(b.color);
       colour.title = t("band.colour");
+      const shadeBox = document.createElement("input");
+      shadeBox.type = "checkbox"; shadeBox.checked = b.shade !== false;
+      const shade = document.createElement("label");
+      shade.className = "band-shade";
+      shade.title = t("band.shadeTitle");
+      shade.append(shadeBox, document.createTextNode(t("band.shade")));
       const drop = document.createElement("button");
       drop.className = "ghost drop"; drop.textContent = t("band.remove");
 
@@ -134,34 +140,46 @@ export const createUI = () => {
         const ok = isFinite(lo) && isFinite(hi) && hi > lo;
         low.style.borderColor = high.style.borderColor = ok ? "" : "var(--warn)";
         if (!ok) return;
-        ui.onBand && ui.onBand(i, { name: name.value, low: lo, high: hi, color: hexToBand(colour.value) });
+        ui.onBand && ui.onBand(i, {
+          name: name.value, low: lo, high: hi, color: hexToBand(colour.value), shade: shadeBox.checked
+        });
       };
       name.oninput = commit; low.oninput = commit; high.oninput = commit; colour.oninput = commit;
+      shadeBox.onchange = commit;
       drop.onclick = () => ui.onBandRemove && ui.onBandRemove(i);
 
-      row.append(name, low, to, high, hz, colour, drop);
+      row.append(name, low, to, high, hz, colour, shade, drop);
       el.bands.append(row);
     });
     el.bandReset.disabled = !custom;
   };
 
-  // --- the share bar ----------------------------------------------------
-  const cells = ZONES.map(([, colour]) => {
-    const c = document.createElement("div");
-    c.style.background = colour;
-    el.share.append(c);
-    return c;
-  });
-  // The zone names are their own element, so a change of language can rename
-  // them without touching the figure beside each.
-  const zoneNames = [];
-  const legendEls = ZONES.map(([, colour], i) => {
-    const s = document.createElement("span");
-    s.innerHTML = '<i style="background:' + colour + '"></i><span></span> <b>-</b>';
-    zoneNames[i] = s.querySelector("span");
-    el.legend.append(s);
-    return s.querySelector("b");
-  });
+  // --- the shares -------------------------------------------------------
+  // One meter per band, each against all voiced time on its own, rather than
+  // one stacked bar: bands may overlap, and a stacked bar can only show parts
+  // of a whole. A last meter counts the time no band covers.
+  let shareRows = [], outsideRow = null, lastBands = [], lastOutside = false;
+  const meter = (name, colour) => {
+    const row = document.createElement("div");
+    row.className = "share-item";
+    row.innerHTML = '<div class="share-label"><i></i><span></span><b>\u2014</b></div>' +
+      '<div class="share-track"><div class="share-fill"></div></div>';
+    row.querySelector("i").style.background = colour;
+    row.querySelector(".share-fill").style.background = colour;
+    row.querySelector("span").textContent = name;
+    el.share.append(row);
+    return { pct: row.querySelector("b"), fill: row.querySelector(".share-fill") };
+  };
+  ui.renderShare = (bands, showOutside = lastOutside) => {
+    lastBands = bands;
+    lastOutside = showOutside;
+    el.showOutside.checked = showOutside;
+    el.share.replaceChildren();
+    shareRows = bands.map(b => meter(td(b.name) || b.low + "-" + b.high + " Hz", opaque(b.color)));
+    outsideRow = bands.length && showOutside ? meter(t("share.outside"), "var(--ink-faint)") : null;
+    if (outsideRow) outsideRow.fill.parentElement.parentElement.classList.add("outside");
+  };
+  const allRows = () => (outsideRow ? shareRows.concat([outsideRow]) : shareRows);
 
   // --- the formant key --------------------------------------------------
   const formantEls = TRACK_TONE.map(([name, colour]) => {
@@ -192,7 +210,7 @@ export const createUI = () => {
   ui.relabel = () => {
     applyStatic(document);
     for (const [k] of PANELS) panelLabels[k].textContent = t("panel." + k);
-    zoneNames.forEach((n, i) => { n.textContent = t("zone." + i); });
+    ui.renderShare(lastBands);
     if (lastStatus) el.status.textContent = said(lastStatus);
     ui.showTake(lastTake);
     ui.showClip(lastClip);
@@ -270,8 +288,7 @@ export const createUI = () => {
   ui.blank = () => {
     el.now.textContent = "—";
     el.median.textContent = "";
-    cells.forEach(c => { c.style.width = "0%"; });
-    legendEls.forEach(e => { e.textContent = "—"; });
+    allRows().forEach(r => { r.fill.style.width = "0%"; r.pct.textContent = "—"; });
     formantEls.forEach(e => { e.textContent = "—"; });
     el.formantNow.textContent = "—";
     el.brightNum.textContent = "—";
@@ -293,11 +310,14 @@ export const createUI = () => {
         hz: Math.round(median(s.voiced)), secs: secs.toFixed(secs < 10 ? 1 : 0)
       });
       const total = s.voiced.length;
-      s.counts.forEach((n, i) => {
+      const show = (r, n) => {
+        if (!r) return;
         const pct = 100 * n / total;
-        cells[i].style.width = pct.toFixed(1) + "%";
-        legendEls[i].textContent = pct.toFixed(0) + "%";
-      });
+        r.fill.style.width = pct.toFixed(1) + "%";
+        r.pct.textContent = pct.toFixed(0) + "%";
+      };
+      s.counts.forEach((n, i) => show(shareRows[i], n));
+      show(outsideRow, s.outside);
     }
     // The latest frame's formants beside their colours, blank when that frame
     // was unvoiced, and the session medians in the corner.

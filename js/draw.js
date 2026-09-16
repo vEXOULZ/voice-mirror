@@ -49,7 +49,8 @@ export const drawTrace = (cv, { trace, cursor, bands }) => {
   g.clearRect(0, 0, w, h);
   const T = tokens();
 
-  for (const b of bands) {
+  const shaded = bands.filter(b => b.shade !== false);
+  for (const b of shaded) {
     g.fillStyle = b.color;
     const y1 = yOf(Math.min(b.high, F0_CEILING), h);
     const y2 = yOf(Math.max(b.low, F0_FLOOR), h);
@@ -82,16 +83,25 @@ export const drawTrace = (cv, { trace, cursor, bands }) => {
   // Each band names itself, the way the per-recording charts do. Top left,
   // because new sound enters at the right and a label there would sit under
   // the newest point of the line. A band too thin to hold its label gets it
-  // just above instead.
+  // just above instead. Bands may overlap, so a label that would land on one
+  // already written moves right, past it, rather than printing over it.
   g.font = "11px system-ui, sans-serif";
   g.textAlign = "left";
-  for (const b of bands) {
+  g.textBaseline = "top";
+  const labels = [];
+  for (const b of shaded) {
     const y1 = yOf(Math.min(b.high, F0_CEILING), h);
     const y2 = yOf(Math.max(b.low, F0_FLOOR), h);
     const text = (b.name ? td(b.name) + "  " : "") + b.low + "-" + b.high + " Hz";
+    const tw = g.measureText(text).width;
+    const y = y2 - y1 >= 16 ? y1 + 3 : Math.max(0, y1 - 14);
+    let x = AXIS + 6;
+    for (const l of labels) {
+      if (Math.abs(l.y - y) < 13 && x < l.x + l.w + 12 && x + tw > l.x) x = l.x + l.w + 12;
+    }
+    labels.push({ x, y, w: tw });
     g.globalAlpha = 0.8; g.fillStyle = T.ink;
-    if (y2 - y1 >= 16) { g.textBaseline = "top"; g.fillText(text, AXIS + 6, y1 + 3); }
-    else { g.textBaseline = "bottom"; g.fillText(text, AXIS + 6, Math.max(12, y1 - 2)); }
+    g.fillText(text, x, y);
   }
   g.globalAlpha = 1;
   g.textBaseline = "middle";

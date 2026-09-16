@@ -18,16 +18,14 @@ export default {
   "panel.plane": "Vowel plane",
   "panel.say": "Sentences",
 
-  "zone.0": "Very low",
-  "zone.1": "Male",
-  "zone.2": "Androgynous",
-  "zone.3": "Female",
-  "zone.4": "Very high",
+  "share.outside": "Outside every band",
 
   "band.name": "Name",
   "band.to": "to",
   "band.remove": "Remove",
   "band.colour": "Drawn translucent, so it stays behind the trace.",
+  "band.shade": "Shade",
+  "band.shadeTitle": "Shade this band on the pitch trace. It is counted either way.",
 
   // readouts
   "read.median": "median {hz} Hz over {secs}s voiced",

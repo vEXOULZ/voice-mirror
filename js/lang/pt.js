@@ -19,11 +19,13 @@ export default {
   "h.show": "Mostrar",
   "h.bands": "Faixas de tom",
   "h.bandsAbout": "Sobre as faixas de tom",
-  "h.bandsInfo": `<p>As áreas sombreadas no traçado do tom e as cinco zonas que a barra de proporção
-    conta: abaixo da faixa inferior, a faixa inferior, o intervalo entre as duas, a faixa superior e
-    acima da superior.</p>
+  "h.bandsInfo": `<p>As faixas com que o painel de tom compara o seu tempo com voz, cada uma por conta
+    própria. As faixas podem se sobrepor, então as proporções podem somar mais de 100%. Desmarque Sombrear para
+    tirar uma faixa do traçado sem deixar de contá-la, e marque a opção abaixo para ver também o tempo
+    fora de todas.</p>
     <p>São uma referência, não uma meta. Se quem acompanha você na fonoaudiologia usa outras, use as dessa pessoa. As mudanças
     valem enquanto você digita, e a sessão inteira é recontada com as novas faixas.</p>`,
+  "h.showOutside": "Mostrar o tempo fora de todas as faixas",
   "h.bandAdd": "Adicionar faixa",
   "h.bandReset": "Voltar às faixas padrão",
   "h.ref": "Vogais de referência",
@@ -74,9 +76,10 @@ export default {
   "h.pitchInfo": `<p>A linha é o seu tom nos últimos dez segundos, numa escala em que cada oitava tem a
     mesma altura. Falhas são silêncio, ou uma consoante sem voz: a página deixa a falha em vez de
     adivinhar.</p>
-    <p>As áreas sombreadas são as faixas de referência, que você pode mudar em Configurações. A barra
-    embaixo mostra como o seu tempo com voz nesta sessão se divide em cinco zonas: abaixo da faixa
-    inferior, dentro dela, entre as duas, dentro da faixa superior e acima dela.</p>`,
+    <p>As áreas sombreadas são faixas de referência, que você pode mudar em Configurações. Os medidores
+    embaixo mostram quanto do seu tempo com voz nesta sessão ficou dentro de cada faixa. As faixas podem
+    se sobrepor, então as proporções podem somar mais de 100%. Em Configurações dá para acrescentar um
+    medidor para o tempo fora de todas elas.</p>`,
   "h.traceLabel": "O seu tom nos últimos dez segundos, contra as faixas de referência. O valor atual e a mediana aparecem em texto acima.",
   "h.formants": "Formantes",
   "h.formantsAbout": "Sobre o painel de formantes",
@@ -144,16 +147,14 @@ export default {
   "panel.plane": "Plano vocálico",
   "panel.say": "Frases",
 
-  "zone.0": "Muito grave",
-  "zone.1": "Masculino",
-  "zone.2": "Andrógino",
-  "zone.3": "Feminino",
-  "zone.4": "Muito agudo",
+  "share.outside": "Fora de todas as faixas",
 
   "band.name": "Nome",
   "band.to": "a",
   "band.remove": "Remover",
   "band.colour": "Desenhada translúcida, para ficar atrás do traçado.",
+  "band.shade": "Sombrear",
+  "band.shadeTitle": "Sombrear esta faixa no traçado do tom. Ela é contada de qualquer forma.",
 
   "read.median": "mediana {hz} Hz em {secs}s com voz",
   "read.medians": "medianas {values} Hz",
@@ -279,10 +280,15 @@ export default {
   data: {
     "Typical male": "Masculino típico",
     "Typical female": "Feminino típico",
+    "Very low": "Muito grave",
+    "Male": "Masculino",
+    "Androgynous": "Andrógino",
+    "Female": "Feminino",
+    "Very high": "Muito agudo",
     "Portuguese (Brazil)": "Português (Brasil)",
     "English (US)": "Inglês (EUA)",
     "Shipped reference": "Referência padrão",
-    "Typical male and female speaking ranges as drawn by the voice-training apps in common clinical use. Not taken from a paper: a practical reference for placing a reading at a glance, not a published norm. Set your own in Settings.":
-      "Faixas típicas de fala masculina e feminina, como desenhadas pelos aplicativos de treino de voz de uso clínico comum. Não vêm de um artigo: são uma referência prática para situar uma leitura de relance, não uma norma publicada. Defina as suas em Configurações."
+    "Typical male and female speaking ranges as drawn by the voice-training apps in common clinical use, with the gap between them and the two ends named as bands of their own. Not taken from a paper: a practical reference for placing a reading at a glance, not a published norm. Set your own in Settings.":
+      "Faixas típicas de fala masculina e feminina, como desenhadas pelos aplicativos de treino de voz de uso clínico comum, com o intervalo entre elas e as duas pontas como faixas próprias. Não vêm de um artigo: são uma referência prática para situar uma leitura de relance, não uma norma publicada. Defina as suas em Configurações."
   }
 };
