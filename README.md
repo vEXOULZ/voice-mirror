@@ -56,7 +56,7 @@ Then open `http://localhost:8765`. **A microphone needs a secure origin**, which
 
 ## Publishing
 
-Push the repository, turn on GitHub Pages for `main`, and that is the whole deployment. `.nojekyll` keeps Pages from touching the folder, and nothing needs building. **Before each push, stamp a version:**
+The site is live at **<https://vexoulz.github.io/voice-mirror/>**, served by GitHub Pages from `main`, and that is the whole deployment. `.nojekyll` keeps Pages from touching the folder, and nothing needs building. **Before each push, stamp a version:**
 
 ```bash
 node tools/stamp.mjs
@@ -64,7 +64,9 @@ node tools/stamp.mjs
 
 Pages lets a browser keep a file for ten minutes, so right after a push a visitor could run the new `main.js` beside the old `ui.js`. The stamp puts `?v=<version>` on every script and stylesheet, and an **import map** in each page carries it to every module import, so a new version is a set of new URLs no cache holds yet. The version also goes to [`js/version.js`](js/version.js), because a page's import map does not reach into a worklet. **The tests fail if you forget**: a page not stamped with the current version, or a module missing from its map, is named.
 
-The pages carry link-preview tags, so a shared link shows a title and a line of description. A preview **image** needs an absolute URL, so add `og:image` once the site has its address.
+The pages carry link-preview tags, so a shared link shows a title and a line of description, and each names its own `og:url`. A preview **image** would need a real file at an absolute URL; there is none yet, so a shared link shows the text alone.
+
+`main` is protected: it takes no direct pushes, and a change reaches it through a pull request. Branches are named `kind/summary` — `fix/stop-discards-take`, `dsp/anti-alias-taps`, `docs/reference-format` — and are deleted once merged.
 
 ## Recording
 
