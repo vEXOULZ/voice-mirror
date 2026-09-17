@@ -63,7 +63,11 @@ export const stamp = version => {
     const file = join(ROOT, page);
     let html = readFileSync(file, "utf8");
     if (!BLOCK.test(html)) throw new Error(page + " has no version block to stamp");
-    html = html.replace(BLOCK, headBlock(version)).replace(ENTRY, '$1?v=' + version + '"');
+    // Written in the page's own line endings, which a Windows checkout turns
+    // to CRLF, so a stamp never leaves a file with the two mixed.
+    const eol = html.includes("\r\n") ? "\r\n" : "\n";
+    html = html.replace(BLOCK, headBlock(version).replace(/\n/g, eol))
+      .replace(ENTRY, '$1?v=' + version + '"');
     writeFileSync(file, html);
   }
   writeFileSync(join(ROOT, "js", "version.js"),

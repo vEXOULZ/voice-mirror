@@ -5,15 +5,16 @@
 import { t } from "./i18n.js";
 import { FFT, WORK_RATE, REWIND_S, TAP, PCM_CAP_S } from "./constants.js";
 import { makeTaps } from "./dsp.js";
-import { encodeWav, floatToInt16, int16ToFloat } from "./wav.js";
+import { encodeWav, encodeWavChunks, floatToInt16 } from "./wav.js";
 import { VERSION } from "./version.js";
+import { saveBlob } from "./save.js";
 
 export const createEngine = () => {
   const st = {
     ctx: null, analyser: null, stream: null, mic: null, play: null,
     tap: null, sink: null, kind: null,
     ring: null, ringAt: 0, ringFull: false,
-    rec: null, chunks: [], recAt: 0, capturing: false, pcm: [], pcmN: 0, pcmCapped: false,
+    rec: null, recAt: 0, capture: null,
     take: null, clip: null,
     voice: null, voiceOn: false, voiceFailed: false, voiceGen: 0,
     buf: null, work: null, taps: null, freq: null, dec: 1
@@ -56,9 +57,10 @@ export const createEngine = () => {
     // The PCM that makes a lossless WAV of a recording. Capped, so a take left
     // running cannot eat the tab; past the cap the compressed recorder goes on
     // alone and the WAV is what was captured up to then.
-    if (st.capturing) {
-      if (st.pcmN >= PCM_CAP_S * rate()) { st.capturing = false; st.pcmCapped = true; }
-      else { st.pcm.push(floatToInt16(block)); st.pcmN += block.length; }
+    const cap = st.capture;
+    if (cap && !cap.capped) {
+      if (cap.pcmN >= PCM_CAP_S * rate()) cap.capped = true;
+      else { cap.pcm.push(floatToInt16(block)); cap.pcmN += block.length; }
     }
   };
 
@@ -117,7 +119,7 @@ export const createEngine = () => {
     try { if (st.mic) st.mic.disconnect(); } catch (e) {}
     st.stream = null; st.mic = null;
     if (st.rec) { try { st.rec.stop(); } catch (e) {} st.rec = null; }
-    st.capturing = false;
+    st.capture = null;
   };
 
   st.listening = () => !!st.stream;
@@ -129,17 +131,20 @@ export const createEngine = () => {
   // --- recording ----------------------------------------------------------
   st.canRecord = () => !!window.MediaRecorder;
 
+  // Each recording owns its chunks and PCM. They used to live on the engine,
+  // so a recorder still closing wrote into, and built its take from, the
+  // arrays a newer recording had just reset.
   st.startRecording = () => {
-    st.chunks = [];
-    st.pcm = []; st.pcmN = 0; st.pcmCapped = false;
-    st.capturing = !!st.tap;
+    const cap = { chunks: [], pcm: [], pcmN: 0, capped: false };
+    st.capture = st.tap ? cap : null;
     // WebM with Opus on desktop and Android. iOS offers mp4 with AAC and
     // nothing else, so the container is whatever the recorder agrees to.
     const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus",
                   "audio/mp4;codecs=mp4a.40.2", "audio/mp4"]
       .find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
     st.rec = new MediaRecorder(st.stream, mime ? { mimeType: mime } : undefined);
-    st.rec.ondataavailable = e => { if (e.data.size) st.chunks.push(e.data); };
+    st.rec.ondataavailable = e => { if (e.data.size) cap.chunks.push(e.data); };
+    st.rec.capture = cap;
     st.rec.start();
     st.recAt = Date.now();
   };
@@ -150,16 +155,18 @@ export const createEngine = () => {
   // file, so a take that can only be had compressed is worth less later.
   st.stopRecording = () => new Promise(resolve => {
     if (!st.rec) return resolve(null);
-    const rec = st.rec;
+    const rec = st.rec, cap = rec.capture;
     st.rec = null;
+    // The PCM ends where the button was pressed, not where the recorder
+    // finishes closing.
+    if (st.capture === cap) st.capture = null;
     rec.onstop = () => {
-      st.capturing = false;
-      const take = { at: new Date(), rate: rate(), capped: st.pcmCapped };
-      if (st.chunks.length) {
-        take.compressed = new Blob(st.chunks, { type: st.chunks[0].type || "audio/webm" });
+      const take = { at: new Date(), rate: rate(), capped: cap.capped };
+      if (cap.chunks.length) {
+        take.compressed = new Blob(cap.chunks, { type: cap.chunks[0].type || "audio/webm" });
       }
-      if (st.pcmN) take.wav = new Blob([encodeWav(int16ToFloat(st.pcm), rate())], { type: "audio/wav" });
-      st.pcm = [];
+      if (cap.pcmN) take.wav = new Blob([encodeWavChunks(cap.pcm, rate())], { type: "audio/wav" });
+      cap.pcm = [];
       // A recorder that produced nothing leaves an earlier take downloadable
       // rather than taking Download away from it.
       if (take.compressed || take.wav) st.take = take;
@@ -216,6 +223,9 @@ export const createEngine = () => {
   };
 
   const startSource = (audio, onEnded) => {
+    // One source at a time. Overwriting st.play left the earlier one sounding
+    // with nothing holding it, so no Stop could reach it.
+    st.stopPlayback();
     st.voiceHalt();
     // The microphone comes off the analyser first, or the room would be mixed
     // into the take and measured with it.
@@ -316,16 +326,7 @@ export const createEngine = () => {
     const d = take.at, p = n => String(n).padStart(2, "0");
     const name = "voice-" + d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate())
       + "-" + p(d.getHours()) + p(d.getMinutes()) + "." + extOf(blob);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Revoked late: Safari has been known to cancel a download whose object
-    // URL went away in the same tick.
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    saveBlob(blob, name);
     return name;
   };
 

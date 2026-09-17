@@ -8,7 +8,7 @@ import {
   BRIGHT_SCALE, FPS, TOL, CAL_SECONDS, TRACK_TONE
 } from "./constants.js";
 import { t, td, applyStatic } from "./i18n.js";
-import { bark, median, sd, semitones } from "./dsp.js";
+import { bark, sd, semitones } from "./dsp.js";
 import { PANELS, hexToBand, bandToHex, opaque } from "./settings.js";
 
 export const $ = id => document.getElementById(id);
@@ -307,7 +307,7 @@ export const createUI = () => {
       // matter.
       const secs = s.voiced.length / FPS;
       el.median.textContent = t("read.median", {
-        hz: Math.round(median(s.voiced)), secs: secs.toFixed(secs < 10 ? 1 : 0)
+        hz: Math.round(s.voiced.median()), secs: secs.toFixed(secs < 10 ? 1 : 0)
       });
       const total = s.voiced.length;
       const show = (r, n) => {
@@ -330,7 +330,7 @@ export const createUI = () => {
       });
     }
     if (s.brights.length) {
-      const b = s.brights[s.brights.length - 1];
+      const b = s.brights.last();
       const f = (b - BRIGHT_SCALE[0]) / (BRIGHT_SCALE[1] - BRIGHT_SCALE[0]);
       // Off either end, the pin turns into an arrow pointing off the bar and
       // the number says so. Parked at the edge, 400 Hz looked like 600.
@@ -340,7 +340,7 @@ export const createUI = () => {
       el.brightNum.textContent = Math.round(b) + " Hz" +
         (low ? t("read.below") : high ? t("read.above") : "");
       el.brightPin.style.left = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
-      el.brightMed.textContent = t("read.brightMedian", { hz: Math.round(median(s.brights)) });
+      el.brightMed.textContent = t("read.brightMedian", { hz: Math.round(s.brights.median()) });
     }
     // Standard deviation of f0 in semitones, the same quantity the offline
     // measure holds. Over the last ten seconds, because how much your pitch is
@@ -348,11 +348,11 @@ export const createUI = () => {
     if (s.voiced.length > 4) {
       const win = sd(s.f0Recent.map(r => semitones(r[1])));
       el.intoneBig.textContent = win == null ? "—" : win.toFixed(2);
-      el.intoneSess.textContent = t("read.session", { sd: sd(s.voiced.map(semitones)).toFixed(2) });
+      el.intoneSess.textContent = t("read.session", { sd: s.voiced.sd().toFixed(2) });
     }
     if (s.vtls.length) {
-      el.vtlBig.textContent = s.vtls[s.vtls.length - 1].toFixed(1);
-      el.vtlSess.textContent = t("read.vtlMedian", { cm: median(s.vtls).toFixed(1), n: s.vtls.length });
+      el.vtlBig.textContent = s.vtls.last().toFixed(1);
+      el.vtlSess.textContent = t("read.vtlMedian", { cm: s.vtls.median().toFixed(1), n: s.vtls.length });
     }
   };
 

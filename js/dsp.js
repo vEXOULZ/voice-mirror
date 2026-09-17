@@ -2,7 +2,7 @@
 // microphone or the clock, which is what makes test/dsp.test.js possible.
 
 import {
-  F0_FLOOR, F0_CEILING, AA_CUTOFF, AA_TAPS, CLARITY, OCTAVE_TOL,
+  F0_FLOOR, F0_CEILING, AA_CUTOFF, AA_TRANSITION, CLARITY, OCTAVE_TOL,
   LPC_ORDER, LPC_WIN, PRE_EMPH, F_MIN, F_MAX, BW_MAX,
   F1_RANGE, F2_RANGE, MIN_GAP, CONT_W, F3_RANGE, F3_GAP,
   SOUND_SPEED, SEMITONE_REF, BRIGHT_LO, BRIGHT_HI,
@@ -13,16 +13,19 @@ import {
 // --- decimation ----------------------------------------------------------
 // A windowed sinc, evaluated only at the output positions, so decimating costs
 // one filtered sample per output rather than a full-rate pass thrown away.
+// A Hamming window's transition is about 3.3 x rate / taps wide, so the count
+// follows the rate and the width in Hz stays put. Odd, so there is a centre.
 export const makeTaps = rate => {
-  const fc = AA_CUTOFF / rate, m = (AA_TAPS - 1) / 2, t = new Float32Array(AA_TAPS);
+  const n = 2 * Math.ceil(3.3 * rate / AA_TRANSITION / 2) + 1;
+  const fc = AA_CUTOFF / rate, m = (n - 1) / 2, t = new Float32Array(n);
   let sum = 0;
-  for (let i = 0; i < AA_TAPS; i++) {
+  for (let i = 0; i < n; i++) {
     const x = i - m;
     const sinc = x === 0 ? 2 * fc : Math.sin(2 * Math.PI * fc * x) / (Math.PI * x);
-    t[i] = sinc * (0.54 - 0.46 * Math.cos(2 * Math.PI * i / (AA_TAPS - 1)));
+    t[i] = sinc * (0.54 - 0.46 * Math.cos(2 * Math.PI * i / (n - 1)));
     sum += t[i];
   }
-  for (let i = 0; i < AA_TAPS; i++) t[i] /= sum;
+  for (let i = 0; i < n; i++) t[i] /= sum;
   return t;
 };
 
@@ -268,6 +271,45 @@ export const sd = arr => {
   if (arr.length < 2) return null;
   const m = arr.reduce((a, b) => a + b, 0) / arr.length;
   return Math.sqrt(arr.reduce((a, b) => a + (b - m) * (b - m), 0) / arr.length);
+};
+
+// A whole session's worth of one figure, with its median and spread on hand.
+// median() and sd() above copy and sort, or walk, everything on every call;
+// asked every eighth frame of an hour-long session that was six sorts of
+// 100k values four times a second. Here each value is inserted in order as it
+// arrives and the spread is kept as running sums, so reading either costs
+// nothing and the answer is the same exact one.
+//
+// `spreadOf` maps a value before it enters the spread, so pitch can keep its
+// median in Hz and its spread in semitones.
+export const createSeries = (spreadOf = v => v) => {
+  const sorted = [];
+  let sum = 0, sq = 0, lastValue = null;
+  return {
+    get length() { return sorted.length; },
+    last: () => lastValue,
+    values: () => sorted,
+    push(v) {
+      let lo = 0, hi = sorted.length;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (sorted[m] <= v) lo = m + 1; else hi = m; }
+      sorted.splice(lo, 0, v);
+      const u = spreadOf(v);
+      sum += u; sq += u * u; lastValue = v;
+    },
+    median() {
+      const n = sorted.length;
+      if (!n) return null;
+      return n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+    },
+    // Population spread, as sd() gives.
+    sd() {
+      const n = sorted.length;
+      if (n < 2) return null;
+      const m = sum / n;
+      return Math.sqrt(Math.max(0, sq / n - m * m));
+    },
+    clear() { sorted.length = 0; sum = 0; sq = 0; lastValue = null; }
+  };
 };
 
 // The boundary the reference markers delimit: the convex hull of one set's

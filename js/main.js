@@ -5,7 +5,8 @@ import {
   F0_FLOOR, TONE_SECONDS, TONE_SETTLE_MS, TONE_TRACT_RANGE, PLANE_F1, PLANE_F2
 } from "./constants.js";
 import {
-  decimate, detectPitch, formants, centroid, vtl, median, bark, createVowelTracker
+  decimate, detectPitch, formants, centroid, vtl, median, bark, createVowelTracker,
+  createSeries, semitones
 } from "./dsp.js";
 import { loadShipped, parseReference, inBand, langsOf } from "./reference.js";
 import { drawTrace, drawFormants, drawPlane, planeAt } from "./draw.js";
@@ -14,6 +15,7 @@ import { createEngine } from "./audio.js";
 import { createUI } from "./ui.js";
 import * as store from "./settings.js";
 import { t, setLang, wireSwitch } from "./i18n.js";
+import { saveJson } from "./save.js";
 
 const ui = createUI();
 const el = ui.el;
@@ -55,8 +57,10 @@ const N = WINDOW_S * FPS;
 const s = {
   trace: new Array(N).fill(null), cursor: 0,
   track: new Array(N).fill(null),
-  voiced: [], brights: [], vtls: [],
-  f1s: [], f2s: [], f3s: [], formantMed: [null, null, null],
+  // Kept in order as they arrive, so the medians and the spread read out
+  // without sorting the whole session. Pitch spreads in semitones.
+  voiced: createSeries(semitones), brights: createSeries(), vtls: createSeries(),
+  f1s: createSeries(), f2s: createSeries(), f3s: createSeries(), formantMed: [null, null, null],
   // Timestamped, and trimmed by the clock rather than by a count of frames. A
   // count would mean "the last ten seconds of voiced sound", which after a
   // pause is not the last ten seconds.
@@ -76,8 +80,8 @@ let testTailUntil = 0;
 const resetSession = () => {
   ui.blank();
   s.trace.fill(null); s.track.fill(null); s.cursor = 0;
-  s.voiced.length = 0; s.brights.length = 0; s.vtls.length = 0; s.f0Recent.length = 0;
-  s.f1s.length = 0; s.f2s.length = 0; s.f3s.length = 0; s.formantMed = [null, null, null];
+  s.voiced.clear(); s.brights.clear(); s.vtls.clear(); s.f0Recent.length = 0;
+  s.f1s.clear(); s.f2s.clear(); s.f3s.clear(); s.formantMed = [null, null, null];
   s.counts.fill(0); s.outside = 0;
   lastFormant = null; lastHz = null;
   tracker.reset();
@@ -98,7 +102,7 @@ const countFrame = hz => {
 const recount = () => {
   s.counts = bands().map(() => 0);
   s.outside = 0;
-  for (const hz of s.voiced) countFrame(hz);
+  for (const hz of s.voiced.values()) countFrame(hz);
   ui.renderShare(bands(), settings.showOutside);
   if (s.voiced.length) ui.readouts(lastHz, s, lastFormant);
 };
@@ -132,7 +136,7 @@ const repaint = () => { paint(); ui.advise(ui.targetOf(ref), tracker); };
 // what is drawn.
 const settle = () => {
   if (s.voiced.length) {
-    s.formantMed = [median(s.f1s), median(s.f2s), median(s.f3s)];
+    s.formantMed = [s.f1s.median(), s.f2s.median(), s.f3s.median()];
     ui.readouts(lastHz, s, lastFormant);
   }
   repaint();
@@ -252,14 +256,18 @@ const useReference = (next, custom) => {
 };
 
 // Nothing silently falls back: if what was loaded cannot be drawn, the page
-// says so and keeps what it had.
+// says so and keeps what it had. It is only remembered once it has been
+// shown: saved first, a file that parsed but failed to show was loaded again
+// on every visit and failed again, and the page never started.
 const useReferenceFile = async f => {
+  const prev = ref, prevCustom = !!settings.reference;
   try {
     const text = await f.text();
     const next = withShipped(parseReference(text));
+    try { useReference(next, true); }
+    catch (e) { useReference(prev, prevCustom); throw e; }
     settings.reference = JSON.parse(text);
     persist();
-    useReference(next, true);
     const dropped = next.dropped;
     ui.status(() => t("status.refLoaded", {
       name: f.name,
@@ -289,17 +297,6 @@ el.target.onchange = repaint;
 el.sayNext.onclick = () => { ui.sayAt++; ui.showSentence(); };
 
 // --- moving settings between machines -----------------------------------
-const saveFile = (text, name) => {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
-};
-
 // Applies a whole settings object at once: import and reset both end here,
 // so the page never shows half of one set and half of another.
 const applyAll = () => {
@@ -311,19 +308,20 @@ const applyAll = () => {
   for (const r of el.lang.querySelectorAll("input")) r.checked = r.value === setLang(settings.lang);
   ui.relabel();
   labelButtons();
-  let next = shipped, custom = false;
+  // A saved reference that cannot be parsed, or parses but cannot be shown,
+  // gives way to the shipped one rather than stopping the page.
   if (settings.reference) {
-    try { next = withShipped(parseReference(settings.reference)); custom = true; }
+    try { useReference(withShipped(parseReference(settings.reference)), true); return; }
     catch (e) {
       say("status.savedRefFailed", { error: e.message }, true);
       settings.reference = null;
     }
   }
-  useReference(next, custom);
+  useReference(shipped, false);
 };
 
 el.setExport.onclick = () => {
-  saveFile(store.toFile(settings), "voice-mirror-settings.json");
+  saveJson(store.toFile(settings), "voice-mirror-settings.json");
   say("status.exported");
 };
 
@@ -429,7 +427,7 @@ const tick = ts => {
 
   paint();
   if (++frame % READ_EVERY === 0) {
-    s.formantMed = [median(s.f1s), median(s.f2s), median(s.f3s)];
+    s.formantMed = [s.f1s.median(), s.f2s.median(), s.f3s.median()];
     ui.readouts(hz, s, f);
     ui.advise(ui.targetOf(ref), tracker);
     const secs = engine.recordingFor();
@@ -458,11 +456,37 @@ const runLoop = () => { if (!raf) raf = requestAnimationFrame(tick); };
 const stopLoop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
 
 // --- buttons -------------------------------------------------------------
+// Ends the recording and offers the take. Shared by Record and Stop: stopping
+// the microphone under a running recorder used to discard the take unseen.
+// `stopping` holds while the recorder finishes, so a second click in that
+// moment cannot start a new recording over the one still being closed.
+let stopping = false;
+const finishRecording = async () => {
+  stopping = true;
+  try {
+    const take = await engine.stopRecording();
+    labelButtons();
+    ui.showTake(take);
+    say(take ? "status.takeReady" : "status.takeEmpty");
+    if (take) {
+      const blob = take.wav || take.compressed;
+      engine.loadClip(t("clip.justRecorded"), await blob.arrayBuffer());
+      ui.showClip(engine.clip.name);
+      el.play.disabled = false;
+    }
+  } finally {
+    stopping = false;
+  }
+};
+
 el.start.onclick = async () => {
+  if (stopping) return;
   endTest(true);
   if (engine.listening()) {
-    // Only the microphone stops. A take already recorded stays downloadable,
-    // and the loop keeps running if something is being played.
+    // A recording in progress is finished and kept first, then only the
+    // microphone stops. A take already recorded stays downloadable, and the
+    // loop keeps running if something is being played.
+    if (engine.rec) await finishRecording();
     engine.stopMic();
     labelButtons();
     el.rec.disabled = true;
@@ -501,19 +525,9 @@ el.start.onclick = async () => {
 };
 
 el.rec.onclick = async () => {
-  if (engine.rec) {
-    const take = await engine.stopRecording();
-    labelButtons();
-    ui.showTake(take);
-    say(take ? "status.takeReady" : "status.takeEmpty");
-    if (take) {
-      const blob = take.wav || take.compressed;
-      engine.loadClip(t("clip.justRecorded"), await blob.arrayBuffer());
-      ui.showClip(engine.clip.name);
-      el.play.disabled = false;
-    }
-    return;
-  }
+  if (stopping) return;
+  if (engine.rec) { await finishRecording(); return; }
+  if (!engine.listening()) return;
   engine.startRecording();
   labelButtons();
 };
@@ -533,8 +547,12 @@ el.keep.onclick = async () => {
 
 // Plays whatever clip is loaded through the analysis. Returns the length in
 // seconds, or null if it could not be decoded, which it has already said.
+// `decoding` holds while a clip is being decoded: a long file takes a moment,
+// and a second click in it would otherwise start the clip twice.
+let decoding = false;
 const playLoaded = async () => {
   let secs;
+  decoding = true;
   try {
     resetSession();
     secs = await engine.playClip(() => {
@@ -546,6 +564,8 @@ const playLoaded = async () => {
   } catch (e) {
     say("status.decodeFailed", { name: engine.clip.name, error: String(e) }, true);
     return null;
+  } finally {
+    decoding = false;
   }
   labelButtons();
   runLoop();
@@ -553,8 +573,13 @@ const playLoaded = async () => {
 };
 
 el.play.onclick = async () => {
+  if (decoding) return;
+  // Asked before endTest: a test vowel played as samples is playback too, and
+  // once endTest has stopped it this click would read as Play and start the
+  // clip instead of stopping.
+  const wasPlaying = engine.playing();
   endTest(true);
-  if (engine.playing()) {
+  if (wasPlaying) {
     engine.stopPlayback();
     labelButtons();
     if (!engine.listening()) stopLoop();

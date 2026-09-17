@@ -3,7 +3,11 @@
 // would mean fetching code from somewhere other than this site, which the page
 // promises it never does.
 
-const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// Quotes too: a link's target is written inside href="...", and a quote left
+// as it was would end the attribute and let the rest of the target become new
+// ones.
+const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 const inline = t => esc(t)
   .replace(/`([^`]+)`/g, "<code>$1</code>")

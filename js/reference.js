@@ -12,16 +12,23 @@ export const REFERENCE_URL = "data/reference.json";
 // A row has to carry both reference sets or it cannot be drawn. A row that
 // half parses is dropped and counted rather than drawn at zero, which would
 // put a diamond in the corner of the plane and look like a measurement.
+// Anything that is not a list is no rows, and anything in the list that is not
+// an object is a row that failed, the same way settings.js treats its bands:
+// a null used to throw from here and lose the whole file over one row.
+const listOf = rows => (Array.isArray(rows) ? rows : []);
+const fields = row => (row && typeof row === "object" ? row : {});
+
 const cleanVowels = rows => {
   const out = [], bad = [];
-  for (const v of rows || []) {
+  for (const row of listOf(rows)) {
+    const v = fields(row);
     const rec = {
       lang: String(v.lang ?? ""), vowel: String(v.vowel ?? ""), word: String(v.word ?? ""),
       m_f1: Number(v.m_f1), m_f2: Number(v.m_f2), w_f1: Number(v.w_f1), w_f2: Number(v.w_f2)
     };
     const ok = rec.lang && rec.vowel &&
       [rec.m_f1, rec.m_f2, rec.w_f1, rec.w_f2].every(n => isFinite(n) && n > 0);
-    (ok ? out : bad).push(ok ? rec : (rec.vowel || JSON.stringify(v)));
+    (ok ? out : bad).push(ok ? rec : (rec.vowel || JSON.stringify(row)));
   }
   return { rows: out, bad };
 };
@@ -30,7 +37,8 @@ const cleanVowels = rows => {
 // its own, so the shares can add up to more than 100. `shade: false` keeps a
 // band off the trace while it still counts, for the wide ones at either end
 // that would otherwise wash over the whole chart.
-const cleanBands = rows => (rows || [])
+const cleanBands = rows => listOf(rows)
+  .map(fields)
   .map(b => ({ name: String(b.name ?? ""), low: Number(b.low), high: Number(b.high),
                color: String(b.color ?? "rgba(150,150,150,.15)"), shade: b.shade !== false }))
   .filter(b => isFinite(b.low) && isFinite(b.high) && b.high > b.low)

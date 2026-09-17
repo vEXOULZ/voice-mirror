@@ -14,7 +14,14 @@ export const F0_FLOOR = 60, F0_CEILING = 500;
 // the correlation cost grows with the lag in samples. The anti-alias corner is
 // the formant ceiling, so the same filtered signal feeds the formant stage
 // without being filtered twice at two different edges.
-export const WORK_RATE = 12000, AA_CUTOFF = 5500, AA_TAPS = 33;
+//
+// The filter is sized by its transition width in Hz, not by a tap count. A
+// fixed 33 taps is a transition of 3.3 x rate / 33, which widens with the
+// device rate: measured 2026-09-17, sound folding onto 4 kHz was only 25 dB
+// down at 44.1 kHz and 18 dB at 96 kHz (50 dB at 48 kHz), and the passband
+// was already 3.4 dB down at 5 kHz. At 1000 Hz every rate folds at least
+// 55 dB down onto 4 kHz and the passband is flat to 5 kHz.
+export const WORK_RATE = 12000, AA_CUTOFF = 5500, AA_TRANSITION = 1000;
 
 export const FFT = 4096;        // 85 ms at 48 kHz: about 2.5 periods at the floor
 export const FPS = 30;          // analysis frames per second

@@ -6,6 +6,7 @@ import { REFERENCE_URL } from "./reference.js";
 import { renderMarkdown } from "./markdown.js";
 import { load, save } from "./settings.js";
 import { t, td, setLang, applyStatic, wireSwitch } from "./i18n.js";
+import { saveJson } from "./save.js";
 
 const $ = id => document.getElementById(id);
 
@@ -15,17 +16,6 @@ if (settings.theme === "light" || settings.theme === "dark") {
   document.documentElement.dataset.theme = settings.theme;
 }
 setLang(settings.lang);
-
-const saveFile = (text, name) => {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
-};
 
 const node = (tag, props = {}, ...kids) => {
   const n = Object.assign(document.createElement(tag), props);
@@ -77,7 +67,7 @@ const renderSets = () => {
     const file = standalone(data, lang);
     const fname = "voice-mirror-reference-" + lang + ".json";
     const btn = node("button", { className: "primary", type: "button" }, t("rp.download", { file: fname }));
-    btn.onclick = () => saveFile(jsonText(file), fname);
+    btn.onclick = () => saveJson(jsonText(file), fname);
     box.append(node("article", { className: "set" },
       node("div", { className: "set-head" },
         node("h3", {}, td(data.languages[lang] || lang)),

@@ -10,13 +10,15 @@ import assert from "node:assert/strict";
 
 import {
   makeTaps, decimate, detectPitch, bark, formants, vtl, semitones,
-  centroid, median, sd, hull, createVowelTracker
+  centroid, median, sd, hull, createVowelTracker, createSeries
 } from "../js/dsp.js";
-import { encodeWav, floatToInt16, int16ToFloat } from "../js/wav.js";
+import { encodeWav, encodeWavChunks, floatToInt16 } from "../js/wav.js";
 import { RMS_GATE, WORK_RATE, F0_FLOOR, F0_CEILING } from "../js/constants.js";
 import { normalise, defaults, fromFile, toFile, hexToBand, bandToHex, PANELS } from "../js/settings.js";
 import { parseReference, inBand } from "../js/reference.js";
 import { synthVowel, upperFormants } from "../js/synth.js";
+import { t, td } from "../js/i18n.js";
+import { renderMarkdown } from "../js/markdown.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT, PAGES, headBlock, readVersion, listModules } from "../tools/stamp.mjs";
@@ -86,6 +88,27 @@ test("decimating a constant preserves it", () => {
   // The edges taper because the filter runs off the end of the buffer, so the
   // middle is what carries the claim.
   assert.ok(Math.abs(out[512] - 0.5) < 1e-3, "middle sample is " + out[512]);
+});
+
+// The response of the taps at f, in dB.
+const tapsDb = (taps, rate, f) => {
+  const m = (taps.length - 1) / 2;
+  let r = 0;
+  for (let k = 0; k < taps.length; k++) r += taps[k] * Math.cos(2 * Math.PI * f / rate * (k - m));
+  return 20 * Math.log10(Math.abs(r) + 1e-12);
+};
+
+test("decimation keeps aliases off the formants at every device rate", () => {
+  // A fixed 33 taps let sound fold onto 4 kHz only 25 dB down at 44.1 kHz and
+  // 18 dB at 96 kHz. Whatever the rate, what lands under 4 kHz after
+  // decimating has to be well down, and the band the formants live in flat.
+  for (const rate of [44100, 48000, 96000]) {
+    const taps = makeTaps(rate), dec = Math.round(rate / WORK_RATE), nyq = rate / dec / 2;
+    let worst = -Infinity;
+    for (let f = 2 * nyq - 4000; f <= rate / 2; f += 25) worst = Math.max(worst, tapsDb(taps, rate, f));
+    assert.ok(worst < -50, rate + " Hz: an alias lands under 4 kHz at " + worst.toFixed(1) + " dB");
+    assert.ok(tapsDb(taps, rate, 5000) > -1, rate + " Hz: 5 kHz is " + tapsDb(taps, rate, 5000).toFixed(1) + " dB");
+  }
 });
 
 // --- pitch ---------------------------------------------------------------
@@ -289,6 +312,30 @@ test("median and sd behave", () => {
   assert.equal(sd([1]), null);
 });
 
+test("a session series reads out exactly what sorting everything would", () => {
+  // Pitch-like values, with repeats, pushed in the order a session would.
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const xs = [], series = createSeries(semitones);
+  assert.equal(series.median(), null);
+  assert.equal(series.sd(), null);
+  assert.equal(series.last(), null);
+  for (let i = 0; i < 2001; i++) {
+    const v = i % 50 === 0 ? 180 : Math.round(90 + 300 * rnd());
+    xs.push(v); series.push(v);
+    if (i % 250 === 0 || i === 2000) {
+      assert.equal(series.length, xs.length);
+      assert.equal(series.last(), v);
+      assert.equal(series.median(), median(xs));
+      if (xs.length > 1) assert.ok(Math.abs(series.sd() - sd(xs.map(semitones))) < 1e-9);
+    }
+  }
+  assert.deepEqual([...series.values()], xs.slice().sort((a, b) => a - b));
+  series.clear();
+  assert.equal(series.length, 0);
+  assert.equal(series.median(), null);
+});
+
 test("the hull is the boundary, and ignores the inside", () => {
   const square = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 1, y: 0 }];
   assert.equal(hull(square).length, 4);
@@ -382,13 +429,19 @@ test("the WAV header says mono 16-bit at the rate it was given", () => {
   assert.equal(buf.byteLength, 44 + n * 2);
 });
 
-test("samples survive the round trip, and clip rather than wrap", () => {
+test("captured samples clip rather than wrap, and reach the file unchanged", () => {
   const x = new Float32Array([0, 0.5, -0.5, 1, -1, 1.7, -1.7]);
-  const back = int16ToFloat([floatToInt16(x)]);
-  assert.ok(Math.abs(back[1] - 0.5) < 1e-4);
-  assert.ok(Math.abs(back[2] + 0.5) < 1e-4);
-  assert.ok(back[5] > 0.99, "a sample over 1 wrapped instead of clipping");
-  assert.ok(back[6] < -0.99, "a sample under -1 wrapped instead of clipping");
+  const pcm = floatToInt16(x);
+  assert.equal(pcm[5], 0x7fff, "a sample over 1 wrapped instead of clipping");
+  assert.equal(pcm[6], -0x8000, "a sample under -1 wrapped instead of clipping");
+  // Split across chunks the way the tap delivers them, and written without a
+  // float copy in between: every sample comes out bit for bit, and the file is
+  // the one encodeWav writes from the same floats.
+  const buf = encodeWavChunks([pcm.subarray(0, 3), pcm.subarray(3)], 48000);
+  const v = new DataView(buf);
+  assert.equal(buf.byteLength, 44 + x.length * 2);
+  for (let i = 0; i < pcm.length; i++) assert.equal(v.getInt16(44 + i * 2, true), pcm[i], "sample " + i);
+  assert.deepEqual(new Uint8Array(buf), new Uint8Array(encodeWav(x, 48000)));
 });
 
 test("the encoder writes the samples it was given", () => {
@@ -472,6 +525,21 @@ test("a reference drops a half-parsed row and names it", () => {
   assert.deepEqual(r.dropped, ["bad"]);
 });
 
+test("a row that is not an object is dropped, not fatal to the file", () => {
+  const good = { lang: "pt", vowel: "i", word: "i", m_f1: 285, m_f2: 2198, w_f1: 307, w_f2: 2676 };
+  const r = parseReference(JSON.stringify({
+    vowel_reference: [null, good, 7],
+    pitch_bands: [null, { low: 60, high: 80 }, "x"]
+  }));
+  assert.equal(r.vowels.length, 1);
+  assert.deepEqual(r.dropped, ["null", "7"]);
+  assert.equal(r.bands.length, 1);
+  // A section that is not a list at all is no rows rather than a crash.
+  const s = parseReference(JSON.stringify({ vowel_reference: [good], pitch_bands: { low: 60 } }));
+  assert.equal(s.bands.length, 0);
+  assert.equal(s.vowels.length, 1);
+});
+
 test("a reference with nothing drawable is refused, not drawn empty", () => {
   assert.throws(() => parseReference(JSON.stringify({ pitch_bands: [], vowel_reference: [] })), /no usable/);
   assert.throws(() => parseReference("{nope"), /not JSON/);
@@ -493,6 +561,28 @@ test("a band's shade flag survives settings, and is on unless turned off", () =>
   assert.equal(r.bands[0].shade, false);
 });
 
+test("a name that every object inherits is not mistaken for a translation", () => {
+  // `in` found Object's own members, so a band called "constructor" printed a
+  // function and a reference with that name threw while being shown.
+  for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+    assert.equal(td(name), name);
+    assert.equal(t(name), name);
+  }
+  assert.equal(t("x {constructor}", {}), "x {constructor}");
+});
+
+// --- the reference page ---------------------------------------------------
+
+test("a link target cannot end its href and add attributes", () => {
+  const html = renderMarkdown("[x](https://a\"onmouseover=\"alert(1)) [y](https://b\"/onfocus=\"z)");
+  // Nothing past href is an attribute: every quote inside it arrives escaped.
+  for (const m of html.matchAll(/<a ([^>]*)>/g)) {
+    assert.match(m[1], /^href="[^"]*"$/, "the tag was " + m[0]);
+  }
+  assert.ok(!/onmouseover="|onfocus="/.test(html));
+  assert.match(renderMarkdown("[ok](data/reference.json)"), /<a href="data\/reference\.json">ok<\/a>/);
+});
+
 // --- publishing ----------------------------------------------------------
 
 test("every page carries the current stamp, covering every module", () => {
@@ -501,7 +591,9 @@ test("every page carries the current stamp, covering every module", () => {
   // and could be served stale beside fresh files.
   const v = readVersion();
   for (const page of PAGES) {
-    const html = readFileSync(join(ROOT, page), "utf8");
+    // Line endings are compared as LF: a Windows checkout turns the pages to
+    // CRLF, and that is not a missing stamp.
+    const html = readFileSync(join(ROOT, page), "utf8").replace(/\r\n/g, "\n");
     assert.ok(html.includes(headBlock(v)), page + " is not stamped with " + v + "; run node tools/stamp.mjs");
     for (const m of html.matchAll(/<script type="module" src="([^"]+)"/g)) {
       assert.ok(m[1].endsWith("?v=" + v), page + " loads " + m[1] + " without the version");
