@@ -17,6 +17,9 @@ import { RMS_GATE, WORK_RATE, F0_FLOOR, F0_CEILING } from "../js/constants.js";
 import { normalise, defaults, fromFile, toFile, hexToBand, bandToHex, PANELS } from "../js/settings.js";
 import { parseReference, inBand } from "../js/reference.js";
 import { synthVowel, upperFormants } from "../js/synth.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { ROOT, PAGES, headBlock, readVersion, listModules } from "../tools/stamp.mjs";
 
 const RATE = WORK_RATE;   // the working rate everything downstream sees
 const LEN = 1024;         // one analysis window, 4096 decimated by four
@@ -488,4 +491,21 @@ test("a band's shade flag survives settings, and is on unless turned off", () =>
   assert.equal(s.bands[1].shade, true);
   const r = parseReference(JSON.stringify({ pitch_bands: [{ low: 60, high: 80, shade: false }] }));
   assert.equal(r.bands[0].shade, false);
+});
+
+// --- publishing ----------------------------------------------------------
+
+test("every page carries the current stamp, covering every module", () => {
+  // Fails when a module was added, or a page edited, without running
+  // node tools/stamp.mjs. A page missing from the map would load unversioned
+  // and could be served stale beside fresh files.
+  const v = readVersion();
+  for (const page of PAGES) {
+    const html = readFileSync(join(ROOT, page), "utf8");
+    assert.ok(html.includes(headBlock(v)), page + " is not stamped with " + v + "; run node tools/stamp.mjs");
+    for (const m of html.matchAll(/<script type="module" src="([^"]+)"/g)) {
+      assert.ok(m[1].endsWith("?v=" + v), page + " loads " + m[1] + " without the version");
+    }
+  }
+  assert.ok(listModules().includes("js/version.js"));
 });

@@ -2,7 +2,7 @@
 
 import {
   FPS, WINDOW_S, READ_EVERY, RMS_GATE, CAL_SECONDS, CAL_OVER, CAL_MIN, CAL_MAX, F0_CEILING,
-  F0_FLOOR, TONE_SECONDS, TONE_SETTLE_MS, TONE_TRACT_RANGE
+  F0_FLOOR, TONE_SECONDS, TONE_SETTLE_MS, TONE_TRACT_RANGE, PLANE_F1, PLANE_F2
 } from "./constants.js";
 import {
   decimate, detectPitch, formants, centroid, vtl, median, bark, createVowelTracker
@@ -582,6 +582,15 @@ const toneTract = () => {
   const v = Number(el.toneTract.value);
   return isFinite(v) ? Math.min(TONE_TRACT_RANGE[1], Math.max(TONE_TRACT_RANGE[0], v)) : settings.toneTract;
 };
+// The F1 and F2 boxes: the keyboard's way in, and a readout of where the
+// pointer last asked for. Kept to the plane's own range.
+const clampTo = (v, [lo, hi], fallback) => (isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback);
+const boxedAt = () => [
+  clampTo(Math.round(Number(el.toneF1.value)), PLANE_F1, 500),
+  clampTo(Math.round(Number(el.toneF2.value)), PLANE_F2, 1500)
+];
+const fillBoxes = at => { el.toneF1.value = Math.round(at[0]); el.toneF2.value = Math.round(at[1]); };
+
 const toneParams = at => ({
   f0: tonePitch(), f1: at[0], f2: at[1], tract: toneTract(), natural: el.toneNatural.checked
 });
@@ -590,13 +599,13 @@ const beginTest = async at => {
   endTest(true);
   probe = at;
   heard = null;
+  fillBoxes(at);
   const asked = toneParams(at);
   const my = test = {
     asked, moved: false, live: true, timer: 0,
     downAt: performance.now(), startedAt: performance.now(), hz: [], f1: [], f2: []
   };
   testTracker.reset();
-  el.toneAgain.disabled = false;
   const live = await engine.voiceStart(asked);
   if (test !== my) return;
   if (!live) {
@@ -652,7 +661,6 @@ const reportTest = done => {
 const armTone = () => {
   el.plane.classList.toggle("armed", el.toneOn.checked);
   el.toneBar.hidden = !el.toneOn.checked;
-  el.toneAgain.disabled = !el.toneOn.checked || !probe;
   if (!el.toneOn.checked) endTest(true);
   repaint();
 };
@@ -684,6 +692,7 @@ el.plane.addEventListener("pointermove", e => {
   if (!test.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
   test.moved = true;
   probe = planeAt(el.plane, ...local(e), true);
+  fillBoxes(probe);
   engine.voiceSet(toneParams(probe));
 });
 
@@ -695,11 +704,22 @@ const letGo = e => {
 el.plane.addEventListener("pointerup", letGo);
 el.plane.addEventListener("pointercancel", letGo);
 
-el.toneAgain.onclick = () => {
-  if (!probe) return;
-  beginTest(probe);
+const playBoxes = () => {
+  const at = boxedAt();
+  fillBoxes(at);
+  beginTest(at);
   releaseTest();
 };
+el.tonePlay.onclick = playBoxes;
+for (const box of [el.toneF1, el.toneF2]) {
+  box.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); playBoxes(); } });
+  // Typed while a still test sounds, and it moves there.
+  box.addEventListener("change", () => {
+    if (!test || !test.live || test.moved) return;
+    probe = boxedAt();
+    engine.voiceSet(toneParams(probe));
+  });
+}
 
 // Changes are heard at once on a test still sounding, and remembered.
 const retone = () => { if (test && test.live && probe) engine.voiceSet(toneParams(probe)); };

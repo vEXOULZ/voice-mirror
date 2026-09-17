@@ -4,7 +4,7 @@ A browser page that shows you your pitch and your vowel while you are making the
 
 **Everything stays in the browser.** No upload, no server, no account, no analytics, no cookies. The microphone is released when you press Stop or close the tab, and every figure on screen dies with it. A recording exists only until you download it or leave the page. The page is static files; there is nothing behind it to send anything to.
 
-**The one thing kept is your settings**: theme, which panels are on, your pitch bands, and a reference file if you loaded one. They sit in this browser's own storage, on this machine, and nowhere else. Nothing about your voice is ever in them.
+**The one thing kept is your settings**: theme, language, which panels are on, your pitch bands, a reference file if you loaded one, and the test vowel's pitch, tract length and voice. They sit in this browser's own storage, on this machine, and nowhere else. Nothing about your voice is ever in them.
 
 > **Two things share the name `voice-analysis`.** This repository is the **live** half: a mirror, in a browser, in real time. The other is a Python tool that measures a finished recording with Praat and writes the numbers into a note. This one shows you a direction; that one produces a measurement. They share their constants on purpose, so the two look for the same things.
 
@@ -16,6 +16,8 @@ A browser page that shows you your pitch and your vowel while you are making the
 - **Intonation variability**, the standard deviation of f0 in semitones. A flat delivery reads as masculine whatever its height.
 - **Vocal tract length**, from the spacing of F1 to F3. It shortens when the larynx rises. An index, not an anatomy measurement.
 - **The vowel plane**, F1 and F2 on the phonetic axes, with published reference vowels as diamonds and their convex hulls. Pick a target vowel and it gives the distance in Bark to both reference sets and the lever to move.
+
+The page speaks **English and Brazilian Portuguese**, switched in the header, and follows the browser's language until you choose. Light, dark or the system's theme sits beside it, and **Settings** opens from the gear.
 
 Every panel can be switched off in **Settings**. All of them at once is more than anyone reads while also trying to speak, and the choice is remembered in this browser.
 
@@ -29,17 +31,40 @@ Every panel can be switched off in **Settings**. All of them at once is more tha
 
 **It cannot tell you how you sound to other people.** Pitch, resonance and intonation are three of the things that matter and they are the three it can measure. Nothing here judges a voice.
 
+## The test vowel
+
+Tick **Test vowel** beside the vowel plane and the plane becomes an instrument. **Click** anywhere and it plays a synthetic vowel with F1 and F2 at that spot; **drag** and the vowel glides after the pointer; or type **F1 and F2** into the boxes and press **Play**, or Enter, which is the way in without a pointer. **Pitch**, **Vocal tract** and **Natural voice** set the rest.
+
+It plays through the same analysis as a recording, so it checks the page end to end: the dot should land on the crosshair. A still click ends by comparing what was asked with what was heard, in the status line and as a ring tied to the crosshair, with the miss in Bark. A glide is not compared.
+
+**It never touches your session.** A test is tracked by a vowel tracker of its own and written nowhere, so a test in the middle of practice costs none of your figures, your loaded file or your take.
+
+- **Vocal tract** places F3 to F5 for a tube of that length, so the vocal tract length panel reads back the length you set.
+- **Natural voice** adds period jitter, amplitude shimmer, a shallow waver and breath riding on the airflow. It brings the harmonics-to-noise ratio from about 30 dB to about 15, near a healthy speaking voice, and was tuned so pitch and formants still track: more breath lost the pitch of a 300 Hz vowel entirely.
+
+The synthesiser is a cascade formant model in [`js/synth.js`](js/synth.js). It runs live in an `AudioWorklet`, [`worklet/voice.js`](worklet/voice.js), which is what lets a drag glide; the tests render vowels with the same code. Where a browser cannot run the worklet, a click still plays from a rendered buffer and the page says a drag will not glide.
+
 ## Running it
 
 It is static files, so any web server will do:
 
 ```bash
-python -m http.server 8731
+python -m http.server 8765
 ```
 
-Then open `http://localhost:8731`. **A microphone needs a secure origin**, which means `https://` or `localhost`; opening `index.html` as a `file://` URL will not work, because ES modules and `fetch` both refuse it.
+Then open `http://localhost:8765`. **A microphone needs a secure origin**, which means `https://` or `localhost`; opening `index.html` as a `file://` URL will not work, because ES modules and `fetch` both refuse it.
 
-To publish it: push the repository, turn on GitHub Pages for the default branch, and that is the whole deployment. `.nojekyll` keeps Pages from touching the folder. Nothing needs building.
+## Publishing
+
+Push the repository, turn on GitHub Pages for `main`, and that is the whole deployment. `.nojekyll` keeps Pages from touching the folder, and nothing needs building. **Before each push, stamp a version:**
+
+```bash
+node tools/stamp.mjs
+```
+
+Pages lets a browser keep a file for ten minutes, so right after a push a visitor could run the new `main.js` beside the old `ui.js`. The stamp puts `?v=<version>` on every script and stylesheet, and an **import map** in each page carries it to every module import, so a new version is a set of new URLs no cache holds yet. The version also goes to [`js/version.js`](js/version.js), because a page's import map does not reach into a worklet. **The tests fail if you forget**: a page not stamped with the current version, or a module missing from its map, is named.
+
+The pages carry link-preview tags, so a shared link shows a title and a line of description. A preview **image** needs an absolute URL, so add `og:image` once the site has its address.
 
 ## Recording
 
@@ -56,7 +81,7 @@ The lossless capture is capped at ten minutes, about 58 MB. Past the cap it stop
 The page ships with the reference below, and **Settings** is where you replace any of it:
 
 - **Pitch bands** are edited directly: name, low, high and colour per band, add or remove rows. Bands may overlap, and a band can be kept off the trace while still counted. The trace and the share meters follow as you type, and the whole session is recounted against the new edges rather than half of it being counted against the old ones.
-- **Reference vowels**, the diamonds and the Target list, come from a JSON file. Write one in the format in [`data/reference.md`](data/reference.md) and press **Load reference**, or drop the file anywhere on the page. It is read in the browser, saved there so it is still loaded next time, and never uploaded. A file can carry its own pitch bands and practice sentences too.
+- **Reference vowels**, the diamonds and the Target list, come from a JSON file. Write one in the format described on the **reference page**, [`reference.html`](reference.html), and press **Load reference**, or drop the file anywhere on the page. That page shows the format in either language, from [`data/reference.md`](data/reference.md) and [`data/reference.pt.md`](data/reference.pt.md), and both shipped vowel sets as tables, each downloadable as a reference file of its own to start from. It is read in the browser, saved there so it is still loaded next time, and never uploaded. A file can carry its own pitch bands and practice sentences too.
 - **Export settings** writes all of it, a loaded reference included, to one JSON file. **Import settings** on another machine or another browser puts it back. That file is also your backup: clearing site data clears settings, and nothing else holds a copy.
 
 | What | Where it comes from |
@@ -87,15 +112,19 @@ Every constant carries the measurement that set it, in [`js/constants.js`](js/co
 
 **The microphone tap is an `AudioWorklet`**, so the rewind buffer is filled on the audio thread, with a `ScriptProcessorNode` fallback for browsers without one.
 
+**Words live in one place per language.** English fixed text is the HTML itself, marked with `data-i18n` keys and read back out of the markup; what the scripts write is in [`js/lang/en.js`](js/lang/en.js); [`js/lang/pt.js`](js/lang/pt.js) holds every key in Portuguese. A missing key falls back to English, then to the key itself, so a gap shows on screen rather than hiding.
+
 ## Tests
 
 ```bash
 node --test test/dsp.test.js
 ```
 
-The pure half is in [`js/dsp.js`](js/dsp.js) and needs no browser, no microphone and no recording. The signals are synthesised from stated pitch and formant values, so a failure says which stage broke. Covered: pitch across the search range and the octave trap, unvoiced rejection for a quiet room and for loud noise, formants recovered from known poles, the wide-F1 case, F2 selection against a narrow high pole, Bark, hull area, vocal tract length, the nucleus and glide rules, and the WAV header byte by byte. On the settings side: a bad field falls back on its own without taking the rest with it, export and import round-trip, band colours survive the colour input, a reference file handed to Import is named as one, and each band counts a pitch on its own, overlapping or not.
+The pure half is in [`js/dsp.js`](js/dsp.js) and needs no browser, no microphone and no recording. The signals are synthesised from stated pitch and formant values, so a failure says which stage broke. Covered: pitch across the search range and the octave trap, unvoiced rejection for a quiet room and for loud noise, formants recovered from known poles, the wide-F1 case, F2 selection against a narrow high pole, Bark, hull area, vocal tract length, the nucleus and glide rules, and the WAV header byte by byte. On the settings side: a bad field falls back on its own without taking the rest with it, export and import round-trip, band colours survive the colour input, a reference file handed to Import is named as one, and each band counts a pitch on its own, overlapping or not. The test vowel: synthesised vowels, clean and natural, come back through decimation and tracking within half a Bark of where they were asked for, the asked tract length reads back within a centimetre, and the natural voice is seeded so it is the same every run. And publishing: both pages carry the current stamp and every module is in their maps.
 
 ## Browsers
+
+The pages need **import maps**, in every current browser and in Safari from 16.4. The live test voice loads a module inside an `AudioWorklet`; a browser that refuses that still plays clicks, without the glide.
 
 Desktop and Android give WebM with Opus; iOS gives mp4 with AAC, and the download follows what was actually produced. iOS also hands back a suspended `AudioContext`, which is why Start has to be a tap. Where `MediaRecorder` is missing entirely, Start still works and Record is disabled rather than the page dying.
 

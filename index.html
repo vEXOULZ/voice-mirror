@@ -6,7 +6,42 @@
 <title data-i18n="h.title">Voice mirror</title>
 <meta name="description" data-i18n-attr="content:h.description" content="A browser mirror for your voice: pitch, brightness and vowel, live, with nothing leaving the machine.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🎙</text></svg>">
-<link rel="stylesheet" href="app.css">
+<!-- Link previews. Read by whatever fetches the link, which runs no script, so
+     they stay in English. -->
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Voice mirror">
+<meta property="og:locale" content="en_GB">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta name="twitter:card" content="summary">
+<meta property="og:title" content="Voice mirror">
+<meta property="og:description" content="Your pitch and your vowel, live, in the browser. No upload, no account, no server.">
+<!-- version:start. Written by tools/stamp.mjs; edit that, not this. -->
+<link rel="stylesheet" href="app.css?v=202609171648">
+<script type="importmap">
+{
+  "imports": {
+    "./js/audio.js": "./js/audio.js?v=202609171648",
+    "./js/constants.js": "./js/constants.js?v=202609171648",
+    "./js/draw.js": "./js/draw.js?v=202609171648",
+    "./js/dsp.js": "./js/dsp.js?v=202609171648",
+    "./js/i18n.js": "./js/i18n.js?v=202609171648",
+    "./js/lang/en.js": "./js/lang/en.js?v=202609171648",
+    "./js/lang/pt.js": "./js/lang/pt.js?v=202609171648",
+    "./js/main.js": "./js/main.js?v=202609171648",
+    "./js/markdown.js": "./js/markdown.js?v=202609171648",
+    "./js/reference-page.js": "./js/reference-page.js?v=202609171648",
+    "./js/reference.js": "./js/reference.js?v=202609171648",
+    "./js/settings.js": "./js/settings.js?v=202609171648",
+    "./js/synth.js": "./js/synth.js?v=202609171648",
+    "./js/ui.js": "./js/ui.js?v=202609171648",
+    "./js/version.js": "./js/version.js?v=202609171648",
+    "./js/wav.js": "./js/wav.js?v=202609171648"
+  }
+}
+</script>
+<!-- version:end -->
 </head>
 <body>
 
@@ -304,6 +339,8 @@
       <p><b>Test vowel</b>: tick it, then click anywhere on the plane to hear a synthetic vowel with
         its F1 and F2 at that spot, or drag to hear it glide. It plays through the same analysis as a
         recording, but never into your session: your figures stay as they were.</p>
+      <p>Without a pointer, type F1 and F2 into the boxes and press Play, or Enter in either box.
+        A click or a glide fills the boxes with where it was.</p>
       <p>A click holds for a moment and ends by comparing what was asked with what the analysis
         heard, in the status line and as a green ring tied to the crosshair. A glide is not
         compared. Vocal tract sets F3 and above, so the vocal tract length panel's estimate reads it
@@ -317,7 +354,12 @@
         <span data-i18n="h.toneOn">Test vowel</span></label>
     </div>
     <div id="toneBar" class="bar sub-bar tone-bar" hidden>
-      <span class="dim" data-i18n="h.toneHint">Click the plane to hear it, or drag to glide.</span>
+      <span class="dim" data-i18n="h.toneHint">Click the plane to hear it, drag to glide, or type F1 and F2 and press Play.</span>
+      <label>F1 <input type="number" id="toneF1" min="200" max="1250" step="1" value="500"
+                       aria-label="F1 in Hz" data-i18n-attr="aria-label:h.toneF1"></label>
+      <label>F2 <input type="number" id="toneF2" min="200" max="4000" step="1" value="1500"
+                       aria-label="F2 in Hz" data-i18n-attr="aria-label:h.toneF2"></label>
+      <button id="tonePlay" class="ghost" data-i18n="h.tonePlay">Play</button>
       <label><span data-i18n="h.tonePitch">Pitch</span>
         <input type="number" id="tonePitch" min="60" max="500" step="1" value="180"> Hz</label>
       <label><span data-i18n="h.toneTract">Vocal tract</span>
@@ -325,7 +367,6 @@
         <output id="toneTractOut" for="toneTract">17.0</output> cm</label>
       <label class="check"><input type="checkbox" id="toneNatural">
         <span data-i18n="h.toneNatural">Natural voice</span></label>
-      <button id="toneAgain" class="ghost" disabled data-i18n="h.toneAgain">Play again</button>
     </div>
     <canvas id="plane" height="260" role="img" data-i18n-attr="aria-label:h.planeLabel"
             aria-label="Vowel plane: your last held vowel against the reference vowels. Distances to a chosen target are given in text below."></canvas>
@@ -363,6 +404,6 @@
   </details>
 </footer>
 
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js?v=202609171648"></script>
 </body>
 </html>

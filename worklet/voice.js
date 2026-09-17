@@ -4,6 +4,10 @@
 // turns it into sound as it moves. The synthesis itself is js/synth.js, the
 // same code the tests render vowels with, so what is heard live is what was
 // measured.
+//
+// Its own import below carries no version: a document's import map does not
+// reach into a worklet. The query on this file's URL is what keeps it fresh,
+// and synth.js has the one entry point this uses, which is kept stable.
 import { createVoice } from "../js/synth.js";
 
 class VoiceProcessor extends AudioWorkletProcessor {

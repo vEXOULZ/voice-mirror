@@ -117,6 +117,8 @@ export default {
     <p><b>Vogal de teste</b>: marque a opção e clique em qualquer lugar do plano para ouvir uma vogal
     sintética com F1 e F2 naquele ponto, ou arraste para ouvi-la deslizar. Ela passa pela mesma análise
     de uma gravação, mas nunca entra na sua sessão: os seus números continuam como estavam.</p>
+    <p>Sem mouse, digite F1 e F2 nas caixas e aperte Tocar, ou Enter em qualquer uma delas. Um clique
+    ou um deslize preenche as caixas com a posição usada.</p>
     <p>Um clique dura um instante e termina comparando o que foi pedido com o que a análise ouviu, na
     linha de status e como um anel verde ligado à mira. Um deslize não é comparado. Trato vocal
     define F3 e acima, de modo que o painel de comprimento do trato vocal o lê de volta, e Voz natural
@@ -124,11 +126,13 @@ export default {
     não existe vogal real, e o ponto pode não acompanhar.</p>`,
   "h.reference": "Referência",
   "h.toneOn": "Vogal de teste",
-  "h.toneHint": "Clique no plano para ouvir, ou arraste para deslizar.",
+  "h.toneHint": "Clique no plano para ouvir, arraste para deslizar, ou digite F1 e F2 e aperte Tocar.",
+  "h.toneF1": "F1 em Hz",
+  "h.toneF2": "F2 em Hz",
+  "h.tonePlay": "Tocar",
   "h.toneTract": "Trato vocal",
   "h.toneNatural": "Voz natural",
   "h.tonePitch": "Tom",
-  "h.toneAgain": "Tocar de novo",
   "h.target": "Alvo",
   "h.planeLabel": "Plano vocálico: a sua última vogal sustentada contra as vogais de referência. As distâncias até o alvo escolhido aparecem em texto abaixo.",
   "h.say": "Diga",

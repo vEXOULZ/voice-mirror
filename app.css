@@ -228,7 +228,7 @@ canvas { width: 100%; display: block; }
 .sub-bar .check { margin: 0; }
 .tone-bar { margin-top: -2px; }
 .tone-bar input[type="number"] {
-  width: 5em; font: inherit; color: var(--ink); background: var(--surface);
+  width: 5.2em; font: inherit; color: var(--ink); background: var(--surface);
   border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 5px 8px;
 }
 #formants { height: 150px; margin-top: 4px; }

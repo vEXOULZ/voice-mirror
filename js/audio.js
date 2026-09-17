@@ -6,6 +6,7 @@ import { t } from "./i18n.js";
 import { FFT, WORK_RATE, REWIND_S, TAP, PCM_CAP_S } from "./constants.js";
 import { makeTaps } from "./dsp.js";
 import { encodeWav, floatToInt16, int16ToFloat } from "./wav.js";
+import { VERSION } from "./version.js";
 
 export const createEngine = () => {
   const st = {
@@ -68,7 +69,7 @@ export const createEngine = () => {
 
     if (st.ctx.audioWorklet) {
       try {
-        await st.ctx.audioWorklet.addModule("worklet/tap.js");
+        await st.ctx.audioWorklet.addModule("worklet/tap.js?v=" + VERSION);
         st.tap = new AudioWorkletNode(st.ctx, "tap", { processorOptions: { size: TAP } });
         st.tap.port.onmessage = e => onBlock(e.data);
         st.kind = "worklet";
@@ -249,7 +250,7 @@ export const createEngine = () => {
     if (st.voice || st.voiceFailed) return st.voice;
     try {
       if (!st.ctx.audioWorklet) throw new Error("no AudioWorklet");
-      await st.ctx.audioWorklet.addModule("worklet/voice.js");
+      await st.ctx.audioWorklet.addModule("worklet/voice.js?v=" + VERSION);
       st.voice = new AudioWorkletNode(st.ctx, "voice", { numberOfInputs: 0, outputChannelCount: [1] });
     } catch (e) {
       st.voiceFailed = true;
