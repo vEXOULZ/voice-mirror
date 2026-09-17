@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rebuild preview.png</title>
+<!--
+  The link-preview card, drawn here rather than in an image editor, so it is
+  the app's own plane with the app's own colours and the shipped reference: a
+  card that cannot drift from what a visitor actually sees.
+
+  Serve the site and open tools/preview-card.html, press the button, and put
+  the file that comes down at the root as preview.png. Nothing here ships to a
+  visitor; the page exists to be run by hand when the card needs redoing.
+-->
+<style>
+  body { background: #111110; color: #f2f1ec; font: 15px system-ui, sans-serif; margin: 24px; }
+  canvas { max-width: 100%; border: 1px solid #2f2e2a; display: block; margin: 16px 0; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 0; background: #6ba6f0; color: #0d1a2b; }
+</style>
+</head>
+<body data-theme="dark">
+<h1>Preview card</h1>
+<p>Drawn at 2×, 2400×1260. Save it as <code>preview.png</code> at the site root.</p>
+<button id="save" type="button">Download preview.png</button>
+<canvas id="card"></canvas>
+
+<script type="module">
+// The theme the card is drawn in. The plane reads its ink from the document,
+// so the card has to sit in a dark one.
+document.documentElement.dataset.theme = "dark";
+
+import { drawPlane } from "../js/draw.js";
+import { parseReference, REFERENCE_URL } from "../js/reference.js";
+
+const W = 1200, H = 630, S = 2;
+const UI = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+const LANG = "pt";
+const PATH = ["i", "e", "ɛ", "a", "ɔ", "o", "u"];   // the path traced on the plane
+
+const load = src => new Promise((res, rej) => {
+  const i = new Image();
+  i.onload = () => res(i);
+  i.onerror = rej;
+  i.src = src;
+});
+
+// Not loadShipped(): its URL is relative to the page asking, and this page
+// sits a directory down from the one the app is served at.
+const ref = parseReference(await (await fetch("../" + REFERENCE_URL)).text());
+const rows = ref.vowels.filter(v => v.lang === LANG);
+const icon = await load("../icon.svg");
+
+const card = document.getElementById("card");
+card.width = W * S;
+card.height = H * S;
+card.style.width = W + "px";
+const g = card.getContext("2d");
+g.scale(S, S);
+
+// The page has no app.css, so the card's own palette is the app's dark one.
+const BG = "#111110", INK = "#f2f1ec", DIM = "#b9b7ad", FAINT = "#97958c", ACCENT = "#6ba6f0";
+document.body.style.setProperty("--ink", INK);
+document.body.style.setProperty("--border", "#2f2e2a");
+document.body.style.setProperty("--accent", ACCENT);
+document.body.style.setProperty("--ink-faint", FAINT);
+
+g.fillStyle = BG;
+g.fillRect(0, 0, W, H);
+
+// The plane itself, drawn by js/draw.js into a canvas sized in CSS pixels the
+// way the app sizes its own.
+const at = v => [v.w_f1, v.w_f2, null];
+const order = PATH.map(s => rows.find(r => r.vowel === s)).filter(Boolean);
+const plane = document.createElement("canvas");
+plane.style.cssText = "position:fixed;left:-9999px;width:560px;height:500px";
+document.body.append(plane);
+drawPlane(plane, {
+  rows, target: null, trail: order.map(at),
+  smooth: at(order[3] || rows[0]), steady: true, probe: null, heard: null
+});
+g.drawImage(plane, 604, 72, 560, 500);
+plane.remove();
+
+g.drawImage(icon, 76, 92, 78, 78);
+g.fillStyle = INK;
+g.font = "700 72px " + UI;
+g.fillText("Voice mirror", 172, 152);
+g.fillStyle = ACCENT;
+g.fillRect(76, 214, 96, 5);
+g.fillStyle = DIM;
+g.font = "400 32px " + UI;
+g.fillText("Your pitch, brightness and vowel,", 76, 290);
+g.fillText("live in the browser.", 76, 336);
+g.fillStyle = ACCENT;
+g.font = "600 28px " + UI;
+g.fillText("No upload. No account. No server.", 76, 412);
+g.fillStyle = FAINT;
+g.font = "400 24px " + UI;
+g.fillText("A mirror for voice training, in English and Portuguese.", 76, 470);
+g.fillStyle = ACCENT;
+g.font = '400 25px ui-monospace, SFMono-Regular, Consolas, monospace';
+g.fillText("vexoulz.github.io/voice-mirror", 76, 534);
+
+document.getElementById("save").onclick = () => {
+  card.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "preview.png";
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }, "image/png");
+};
+</script>
+</body>
+</html>
