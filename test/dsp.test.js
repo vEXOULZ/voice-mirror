@@ -15,7 +15,7 @@ import {
 import { encodeWav, encodeWavChunks, floatToInt16 } from "../js/wav.js";
 import { RMS_GATE, WORK_RATE, F0_FLOOR, F0_CEILING } from "../js/constants.js";
 import { normalise, defaults, fromFile, toFile, hexToBand, bandToHex, PANELS } from "../js/settings.js";
-import { parseReference, inBand } from "../js/reference.js";
+import { parseReference, inBand, pickLang } from "../js/reference.js";
 import { synthVowel, upperFormants } from "../js/synth.js";
 import { t, td } from "../js/i18n.js";
 import { renderMarkdown } from "../js/markdown.js";
@@ -538,6 +538,17 @@ test("a row that is not an object is dropped, not fatal to the file", () => {
   const s = parseReference(JSON.stringify({ vowel_reference: [good], pitch_bands: { low: 60 } }));
   assert.equal(s.bands.length, 0);
   assert.equal(s.vowels.length, 1);
+});
+
+test("the plane opens on the page's own language when the reference has it", () => {
+  // It used to open on "pt" whatever the page said, so an English visitor met
+  // the Portuguese vowels.
+  assert.equal(pickLang(["en", "pt"], "en"), "en");
+  assert.equal(pickLang(["en", "pt"], "pt"), "pt");
+  // A reference that does not carry the page's language still draws: the codes
+  // are the data file's, and it may hold languages the page has no words for.
+  assert.equal(pickLang(["fr", "pt"], "en"), "fr");
+  assert.equal(pickLang([], "en"), "");
 });
 
 test("a reference with nothing drawable is refused, not drawn empty", () => {
