@@ -10,6 +10,7 @@ import {
 import { t, td, applyStatic } from "./i18n.js";
 import { bark, sd, semitones } from "./dsp.js";
 import { PANELS, hexToBand, bandToHex, opaque } from "./settings.js";
+import { pickLang } from "./reference.js";
 
 export const $ = id => document.getElementById(id);
 
@@ -214,7 +215,13 @@ export const createUI = () => {
     if (lastStatus) el.status.textContent = said(lastStatus);
     ui.showTake(lastTake);
     ui.showClip(lastClip);
-    if (lastRef) ui.fillReference(...lastRef);
+    // The set on screen, not the one this was last called with: relabelling
+    // changes the words, and used to put the language select back to whatever
+    // it held when the reference was loaded.
+    if (lastRef) {
+      const [ref, langs, want, custom, customBands] = lastRef;
+      ui.fillReference(ref, langs, el.refLang.value || want, custom, customBands);
+    }
   };
 
   // --- reference --------------------------------------------------------
@@ -227,7 +234,7 @@ export const createUI = () => {
       o.textContent = td(ref.languages[l] || l);
       el.refLang.append(o);
     }
-    el.refLang.value = langs.includes(want) ? want : (langs[0] || "");
+    el.refLang.value = pickLang(langs, want);
     ui.fillTargets(ref);
     ui.showSources(ref, customBands);
     hasSentences = ref.sentences.length > 0;

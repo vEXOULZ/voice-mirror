@@ -14,7 +14,7 @@ import { synthVowel, upperFormants } from "./synth.js";
 import { createEngine } from "./audio.js";
 import { createUI } from "./ui.js";
 import * as store from "./settings.js";
-import { t, setLang, wireSwitch } from "./i18n.js";
+import { t, setLang, getLang, wireSwitch } from "./i18n.js";
 import { saveJson } from "./save.js";
 
 const ui = createUI();
@@ -164,6 +164,9 @@ const applyLanguage = () => {
   ui.relabel();
   ui.renderBands(bands(), !!settings.bands);
   labelButtons();
+  // Switching the page moves the plane's set with it, for as long as the set
+  // is the one the page chose. A set you picked stays where you put it.
+  if (!refLangPicked) useReference(ref, !!settings.reference);
   settle();
 };
 
@@ -246,9 +249,16 @@ const withShipped = r => ({
   sources: { ...shipped.sources, ...r.sources }
 });
 
+// The plane opens on the reference set for the language the page is in: a page
+// that came up in English used to show the Portuguese vowels, because the set
+// was pinned to "pt" whatever the words around it said. Once you have picked a
+// set yourself it is yours, and the page language stops moving it.
+let refLangPicked = false;
+const wantRefLang = () => (refLangPicked && el.refLang.value ? el.refLang.value : getLang());
+
 const useReference = (next, custom) => {
   ref = next;
-  ui.fillReference(ref, langsOf(ref), el.refLang.value || "pt", custom, !!settings.bands);
+  ui.fillReference(ref, langsOf(ref), wantRefLang(), custom, !!settings.bands);
   ui.applyPanels(settings.panels);
   ui.renderBands(bands(), !!settings.bands);
   recount();
@@ -292,7 +302,12 @@ el.refReset.onclick = () => {
   say("status.refReset");
 };
 
-el.refLang.onchange = () => { ui.fillTargets(ref); ui.showSources(ref, !!settings.bands); repaint(); };
+el.refLang.onchange = () => {
+  refLangPicked = true;
+  ui.fillTargets(ref);
+  ui.showSources(ref, !!settings.bands);
+  repaint();
+};
 el.target.onchange = repaint;
 el.sayNext.onclick = () => { ui.sayAt++; ui.showSentence(); };
 

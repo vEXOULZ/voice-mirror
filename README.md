@@ -17,7 +17,7 @@ A browser page that shows you your pitch and your vowel while you are making the
 - **Vocal tract length**, from the spacing of F1 to F3. It shortens when the larynx rises. An index, not an anatomy measurement.
 - **The vowel plane**, F1 and F2 on the phonetic axes, with published reference vowels as diamonds and their convex hulls. Pick a target vowel and it gives the distance in Bark to both reference sets and the lever to move.
 
-The page speaks **English and Brazilian Portuguese**, switched in the header, and follows the browser's language until you choose. Light, dark or the system's theme sits beside it, and **Settings** opens from the gear.
+The page speaks **English and Brazilian Portuguese**, switched in the header, and follows the browser's language until you choose. The vowel plane opens on the reference set for that same language, and moves with it while the page is choosing; pick a set yourself and it stays where you put it. Light, dark or the system's theme sits beside it, and **Settings** opens from the gear.
 
 Every panel can be switched off in **Settings**. All of them at once is more than anyone reads while also trying to speak, and the choice is remembered in this browser.
 

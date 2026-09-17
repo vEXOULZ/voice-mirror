@@ -83,3 +83,9 @@ export const loadShipped = async () => {
 };
 
 export const langsOf = ref => [...new Set(ref.vowels.map(v => v.lang))].sort();
+
+// Which set the plane opens on. The page's own language if the reference
+// carries it, and otherwise the first one it does carry: the codes here are a
+// data file's, not the interface's, so a file may hold languages the page has
+// no words for, or none of the one it is being read in.
+export const pickLang = (langs, want) => (langs.includes(want) ? want : (langs[0] || ""));
