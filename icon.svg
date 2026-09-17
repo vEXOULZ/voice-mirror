@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Voice mirror">
+  <!-- The badge is the point. A bare glyph takes the colour of whatever is
+       behind it, and a tab bar is light in one theme and near black in the
+       other, so the old emoji vanished into the dark one. A filled badge
+       carries its own background and reads on both.
+
+       The blue is the app's accent, lifted in dark surroundings the way
+       app.css lifts it. A browser that ignores the query still gets the
+       light blue, which is legible either way. -->
+  <style>
+    .badge { fill: #1f6fcf; }
+    @media (prefers-color-scheme: dark) { .badge { fill: #4f93e8; } }
+  </style>
+  <rect class="badge" width="32" height="32" rx="7"/>
+  <!-- Microphone: capsule, cradle, stem. Nothing thinner than 2.4 units,
+       which is just over one pixel once this is drawn at 16. -->
+  <g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round">
+    <rect x="11.4" y="4.6" width="9.2" height="14.6" rx="4.6" fill="#fff" stroke="none"/>
+    <path d="M8.4 15.4v1.4a7.6 7.6 0 0 0 15.2 0v-1.4"/>
+    <path d="M16 25v2.9"/>
+  </g>
+</svg>

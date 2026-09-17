@@ -64,7 +64,9 @@ node tools/stamp.mjs
 
 Pages lets a browser keep a file for ten minutes, so right after a push a visitor could run the new `main.js` beside the old `ui.js`. The stamp puts `?v=<version>` on every script and stylesheet, and an **import map** in each page carries it to every module import, so a new version is a set of new URLs no cache holds yet. The version also goes to [`js/version.js`](js/version.js), because a page's import map does not reach into a worklet. **The tests fail if you forget**: a page not stamped with the current version, or a module missing from its map, is named.
 
-The pages carry link-preview tags, so a shared link shows a title and a line of description, and each names its own `og:url`. A preview **image** would need a real file at an absolute URL; there is none yet, so a shared link shows the text alone.
+The pages carry link-preview tags, so a shared link shows a title, a line of description and a card: [`preview.png`](preview.png), 2400×1260, named absolutely because a preview is fetched by something with no page to resolve a relative URL against. The card is not drawn in an image editor. [`tools/preview-card.html`](tools/preview-card.html) renders it with the app's own `drawPlane` and the shipped reference, so it cannot drift from what a visitor sees: serve the site, open that page, press the button, and put the file it hands you at the root.
+
+The tab icon is [`icon.svg`](icon.svg), a white microphone on a badge in the accent colour, with [`icon-32.png`](icon-32.png) and [`icon-180.png`](icon-180.png) beside it for Safari and the home screen. The badge carries its own background on purpose: the emoji glyph it replaced took the colour of whatever was behind it and disappeared into a dark tab bar.
 
 `main` is protected: it takes no direct pushes, and a change reaches it through a pull request. Branches are named `kind/summary` — `fix/stop-discards-take`, `dsp/anti-alias-taps`, `docs/reference-format` — and are deleted once merged.
 
